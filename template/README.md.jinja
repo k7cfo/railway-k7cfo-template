@@ -22,7 +22,7 @@ Open `http://localhost:5173` and sign in with the development credentials printe
 ```bash
 pnpm doctor
 pnpm check
-pnpm test:e2e
+pnpm verify
 pnpm db:generate
 pnpm db:migrate
 pnpm db:studio
@@ -31,9 +31,9 @@ pnpm db:reset
 pnpm deploy:check
 ```
 
-`db:reset` refuses to run in production. Seeds are never automatic in production.
+`pnpm verify` is the required pre-deployment gate. It runs linting, strict types, tests, dead-code detection, a production build, browser tests, and a production-server smoke test. `db:reset` refuses to run in production. Seeds are never automatic in production.
 
-Read `OWNER_GUIDE.md` for operations, `AGENTS.md` before agent-assisted work, `docs/ARCHITECTURE.md` for boundaries, `docs/SECRETS.md` for 1Password, and `docs/RAILWAY.md` to deploy.
+Read `OWNER_GUIDE.md` for operations, `AGENTS.md` before agent-assisted work, `docs/QUALITY.md` for the quality gate, `docs/ARCHITECTURE.md` for boundaries, `docs/SECRETS.md` for 1Password, and `docs/RAILWAY.md` to deploy.
 
 ## Included product shell
 

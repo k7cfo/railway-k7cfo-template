@@ -26,7 +26,7 @@ const Protected = ({ children }: { children: React.ReactNode }) => (
     <AppShell>{children}</AppShell>
   </RequireAuth>
 );
-export function App() {
+export default function App() {
   return (
     <>
       <Routes>
@@ -170,4 +170,3 @@ export function App() {
     </>
   );
 }
-export default App;

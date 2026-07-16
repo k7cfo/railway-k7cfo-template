@@ -37,6 +37,8 @@ Use 1Password as the human source of truth, `op run --env-file=.env.op -- pnpm d
 
 ## Commands and definition of done
 
-Use pnpm. Key commands: `pnpm setup`, `pnpm doctor`, `pnpm dev`, `pnpm db:generate`, `pnpm db:migrate`, `pnpm db:seed`, `pnpm check`, `pnpm test:e2e`, `pnpm deploy:check`, `pnpm build`, and `pnpm start`.
+Use pnpm. Key commands: `pnpm setup`, `pnpm doctor`, `pnpm dev`, `pnpm db:generate`, `pnpm db:migrate`, `pnpm db:seed`, `pnpm check`, `pnpm test:e2e`, `pnpm test:smoke`, `pnpm verify`, `pnpm deploy:check`, `pnpm build`, and `pnpm start`. Read `docs/QUALITY.md` before changing quality tooling.
 
-Before completion: build the smallest complete product workflow; remove fake actions; add migrations; update `.env.example`, tests, `docs/PRODUCT.md`, and other affected docs; record assumptions; run `pnpm check`, Playwright, migration/seed checks, a production-server health/readiness/SPA smoke test, and a Docker build. Preserve all reusable SaaS capabilities and leave the app ready for Railway.
+Keep changes intentionally small. Reuse or simplify existing modules before adding files, dependencies, helpers, or abstraction layers. Shared abstractions need at least two concrete uses. Remove dead code instead of commenting it out. Never weaken lint, type, dead-code, or test rules merely to make a check pass; document any narrow exception and its reason in `docs/DECISIONS.md`.
+
+Before completion: build the smallest complete product workflow; remove fake actions; add migrations; update `.env.example`, tests, `docs/PRODUCT.md`, and other affected docs; record assumptions; run `pnpm verify` and a Docker build. If a required check cannot run, say exactly why and do not describe the change as deployment-ready. Codex, Claude Code, and other coding harnesses must fix failures before recommending or initiating a deployment. Preserve all reusable SaaS capabilities and leave the app ready for Railway.

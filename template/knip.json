@@ -1,0 +1,22 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "scripts/**/*.{ts,mjs}",
+    "test/**/*.ts",
+    "e2e/**/*.ts",
+    "src/services/analytics/index.ts",
+    "src/services/jobs/index.ts",
+    "*.config.ts"
+  ],
+  "project": [
+    "src/**/*.ts",
+    "scripts/**/*.{ts,mjs}",
+    "test/**/*.ts",
+    "e2e/**/*.ts",
+    "web/src/**/*.{ts,tsx}",
+    "*.config.ts"
+  ],
+  "ignore": ["web/src/components/ui/**"],
+  "ignoreDependencies": ["^@fontsource", "^@shadcn/react$", "^shadcn$", "^tailwindcss$", "^tw-animate-css$"],
+  "drizzle": false
+}

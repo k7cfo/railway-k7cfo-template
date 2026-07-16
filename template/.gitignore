@@ -5,6 +5,7 @@
 *.pem
 *.key
 node_modules/
+.pnpm-store/
 dist/
 web/dist/
 .data/
