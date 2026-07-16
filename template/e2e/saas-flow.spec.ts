@@ -1,0 +1,31 @@
+import { expect, test } from "@playwright/test";
+
+test("registration, onboarding, dashboard, settings, support, and sign out", async ({ page }) => {
+  const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+  await page.goto("/sign-up");
+  await page.getByLabel("Name").fill("Playwright User");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill("CorrectHorse123!");
+  await page.getByRole("button", { name: /create account/i }).click();
+  await expect(page).toHaveURL(/onboarding/);
+  await page.getByRole("button", { name: /save and continue/i }).click();
+  await page.getByLabel("How will you mainly use the product?").selectOption("operator");
+  await page.getByRole("button", { name: /save and continue/i }).click();
+  await page.getByRole("button", { name: /save and continue/i }).click();
+  await page.getByLabel("What are you hoping to accomplish first?").fill("Ship a useful workflow today");
+  await page.getByRole("button", { name: /save and continue/i }).click();
+  await page.getByRole("button", { name: /finish onboarding/i }).click();
+  await expect(page.getByRole("heading", { name: /keep the operation moving/i })).toBeVisible();
+  await page.goto("/settings/profile");
+  await page.getByLabel("Job title").fill("Test Operator");
+  await page.getByRole("button", { name: /save profile/i }).click();
+  await expect(page.getByText("Profile saved.")).toBeVisible();
+  await page.goto("/support/new");
+  await page.getByLabel("Subject").fill("Playwright support request");
+  await page.getByLabel("Message").fill("This ticket proves the complete support workflow works.");
+  await page.getByRole("button", { name: /create ticket/i }).click();
+  await expect(page.getByRole("heading", { name: "Playwright support request" })).toBeVisible();
+  await page.getByRole("button", { name: /user menu/i }).click();
+  await page.getByRole("button", { name: /sign out/i }).click();
+  await expect(page).toHaveURL(/sign-in/);
+});
