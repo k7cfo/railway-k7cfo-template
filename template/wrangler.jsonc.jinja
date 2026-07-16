@@ -1,0 +1,108 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "{{ worker_name }}",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "logpush": true,
+  "observability": { "enabled": true },
+  "preview_urls": true,
+  // Workers AI binding. `c.env.AI` (typed by `wrangler types`) powers the
+  // streaming chatbot at POST /api/chat, routed through the "default" AI
+  // Gateway. Inference runs on Cloudflare's GPU network — `wrangler dev`
+  // proxies to it (no --remote needed) and bills real usage even locally.
+  // `remote: true` makes that "always hits remote" contract explicit and
+  // silences wrangler's local-dev warning.
+  "ai": { "binding": "AI", "remote": true },
+  // Cloudflare Email Sending binding — powers the password-reset email
+  // (src/lib/email/reset-password.ts). No API keys: sends ride the native
+  // binding. The `EMAIL_FROM` address's domain must be onboarded once with
+  // `wrangler email sending enable <domain>` (or the dashboard) before sends
+  // succeed.
+  "send_email": [{ "name": "EMAIL" }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "{{ d1_database_name }}",
+      "database_id": "REPLACE_WITH_ID_FROM_wrangler_d1_create",
+      "migrations_dir": "./drizzle"
+    }
+  ],
+  "assets": {
+    "directory": "./web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    "BETTER_AUTH_URL": "http://localhost:8787",
+    // Sender for transactional email (password reset). Change this to an
+    // address on a domain you've onboarded to Cloudflare Email Sending.
+    "EMAIL_FROM": "noreply@example.com"{% if cloudflare_account_subdomain %},
+    // Workers Builds preview URLs (`<version>-{{ worker_name }}.<sub>.workers.dev`)
+    // are siblings of the prod URL under the same account subdomain. Seeding the
+    // wildcard here means auth works on previews even before `mise run deploy`
+    // patches BETTER_AUTH_URL to the deployed origin (which would let
+    // deriveTrustedOrigins() infer the same wildcard automatically).
+    "BETTER_AUTH_TRUSTED_ORIGINS": "https://*.{{ cloudflare_account_subdomain }}.workers.dev"{% endif %},
+    // Stripe price IDs for the Pro plan (flat base + metered token overage).
+    // Filled in by `mise run stripe:bootstrap` — until then billing endpoints
+    // 400 on checkout, but auth + chat's free tier work fine (the stripe
+    // plugin is skipped entirely while STRIPE_SECRET_KEY is unset).
+    "STRIPE_PRO_PRICE_ID": "REPLACE_WITH_ID_FROM_stripe_bootstrap",
+    "STRIPE_METERED_PRICE_ID": "REPLACE_WITH_ID_FROM_stripe_bootstrap"
+  },
+  // The `env.preview` block defines a separate `{{ worker_name }}-preview`
+  // Worker bound to its own `{{ d1_database_name }}-preview` D1, so
+  // PR-branch traffic never touches prod data.
+  //
+  // Workers Builds wires both Workers to this repo (see `mise.toml` →
+  // `tasks.builds:connect`):
+  //   • main branch        → `{{ worker_name }}`         → `wrangler deploy`
+  //   • non-main branches  → `{{ worker_name }}-preview` → `wrangler versions upload --env preview`
+  //
+  // Workers Builds connections are per-Worker — its triggers can only
+  // upload to the connected Worker. Putting the non-main trigger on
+  // `{{ worker_name }}-preview` (instead of on `{{ worker_name }}`) is
+  // what makes `--env preview` actually take effect, swapping in the
+  // bindings below. PR previews surface at version URLs of the preview
+  // Worker (`*.{{ worker_name }}-preview.<sub>.workers.dev`).
+  //
+  // d1_databases / vars are non-inheritable — every binding the preview
+  // Worker uses must be redeclared here.
+  //
+  // Bootstrap once with `mise run d1:create-preview &&
+  // mise run deploy:preview && mise run secret:put-preview` so the Worker
+  // exists before `mise run builds:connect` wires its non-main trigger.
+  "env": {
+    "preview": {
+      "name": "{{ worker_name }}-preview",
+      // `routes` IS inheritable. The day someone adds a top-level
+      // custom-domain route here, the next `wrangler deploy --env preview`
+      // would silently inherit it and reassign the prod hostname to the
+      // preview Worker — an outage. Pinning routes=[] makes the preview
+      // Worker incapable of owning a custom domain regardless of what
+      // top-level config grows.
+      "routes": [],
+      "vars": {
+        "BETTER_AUTH_URL": "http://localhost:8787",
+        "EMAIL_FROM": "noreply@example.com"{% if cloudflare_account_subdomain %},
+        "BETTER_AUTH_TRUSTED_ORIGINS": "https://*.{{ cloudflare_account_subdomain }}.workers.dev"{% endif %},
+        "STRIPE_PRO_PRICE_ID": "REPLACE_WITH_ID_FROM_stripe_bootstrap",
+        "STRIPE_METERED_PRICE_ID": "REPLACE_WITH_ID_FROM_stripe_bootstrap"
+      },
+      // Bindings are not inherited by named environments — redeclare AI and the
+      // Email Sending binding here so the preview Worker matches prod.
+      "ai": { "binding": "AI", "remote": true },
+      "send_email": [{ "name": "EMAIL" }],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "{{ d1_database_name }}-preview",
+          "database_id": "REPLACE_WITH_ID_FROM_wrangler_d1_create_preview",
+          "migrations_dir": "./drizzle"
+        }
+      ]
+    }
+  }
+}

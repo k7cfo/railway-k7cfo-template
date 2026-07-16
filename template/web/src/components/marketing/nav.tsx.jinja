@@ -1,0 +1,46 @@
+import { Link } from "react-router"
+
+import { Button } from "@/components/ui/button"
+import { Wordmark } from "@/components/marketing/wordmark"
+
+export function Nav() {
+  return (
+    <nav className="flex items-center justify-between border-b border-[var(--border-1)] py-5">
+      <Link to="/" className="no-underline">
+        <Wordmark text="{{ app_title }}" size="md" />
+      </Link>
+
+      <div className="flex items-center gap-5 font-mono text-[11px] tracking-[0.1em] uppercase">
+        <a
+          href="#features"
+          className="hidden text-[var(--fg-2)] no-underline transition-colors duration-150 hover:text-[var(--fg-0)] sm:inline"
+        >
+          FEATURES
+        </a>
+        <span aria-hidden className="hidden text-[var(--fg-3)] sm:inline">·</span>
+        <a
+          href="#pricing"
+          className="hidden text-[var(--fg-2)] no-underline transition-colors duration-150 hover:text-[var(--fg-0)] sm:inline"
+        >
+          PRICING
+        </a>
+        <span aria-hidden className="hidden text-[var(--fg-3)] sm:inline">·</span>
+        <a
+          href="#faq"
+          className="hidden text-[var(--fg-2)] no-underline transition-colors duration-150 hover:text-[var(--fg-0)] sm:inline"
+        >
+          FAQ
+        </a>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/login">SIGN IN</Link>
+        </Button>
+        {/* Monochrome here so the hero's CTA owns the page's one accent. */}
+        <Button variant="default" size="sm" asChild>
+          <Link to="/signup">
+            GET STARTED <span aria-hidden>→</span>
+          </Link>
+        </Button>
+      </div>
+    </nav>
+  )
+}

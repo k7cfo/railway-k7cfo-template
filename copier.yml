@@ -1,0 +1,114 @@
+_min_copier_version: "9.0"
+_subdirectory: template
+_templates_suffix: .jinja
+_answers_file: .copier-answers.yml
+# AGENTS.md is a symlink to CLAUDE.md; recreate it as a symlink in generated
+# projects instead of dereferencing it into a copied regular file.
+_preserve_symlinks: true
+
+_exclude:
+  - "node_modules"
+  - "**/node_modules"
+  - ".wrangler"
+  - "**/.wrangler"
+  - "web/dist"
+  - "worker-configuration.d.ts"
+  - ".dev.vars"
+  - ".cf-env.sh"
+
+_tasks:
+  - "mise trust"
+  - "mise install"
+  - "mise exec -- bun install"
+  - ["bash", "-c", "cd web && mise exec -- bun install && mise exec -- bun run build"]
+  - "mise exec -- bunx wrangler types"
+
+_message_after_copy: |
+  Project generated. All project commands are mise tasks.
+  mise trust + mise install already ran — bun and node are pinned per mise.toml.
+
+  Next steps:
+    bunx wrangler login       # one-time CF auth (or see headless below)
+    mise init                 # deps + .dev.vars + local migrations + remote D1 +
+                              # BETTER_AUTH_SECRET + remote migrations + initial
+                              # git commit (captures .copier-answers.yml so
+                              # `mise run update-from-template` works later)
+    mise dev                  # http://localhost:8787
+    mise deploy               # ship to *.workers.dev
+
+  Billing (Stripe) is built in but dormant until configured:
+    mise run stripe:bootstrap # create meter + Pro prices, patch wrangler.jsonc
+                              # (needs STRIPE_SECRET_KEY in env or .dev.vars)
+    mise run stripe:secrets   # upload Stripe secrets to the deployed Worker
+  Until then, sign-up and the free chat tier work normally.
+
+  init provisions remote resources only when wrangler is already authenticated;
+  otherwise it prints a hint. Run
+  `mise run d1:create && mise run secret:put && mise run migrate:remote`
+  manually after logging in. Requires `jq`.
+
+  init's initial commit only fires when git is empty (no HEAD yet). If you
+  prefer to manage git yourself, just remember to include .copier-answers.yml
+  in your first commit — `copier update` needs it.
+
+  Headless Linux / no browser? `wrangler login` fails with
+  "Missing file or directory: xdg-open". Copy .env.local.example to
+  .env.local and fill in CLOUDFLARE_API_TOKEN (or the API key +
+  email fallback). mise loads it into every task automatically, and
+  `mise init --headless` validates the creds and handles the full remote
+  bootstrap in one shot.
+
+  `mise tasks` lists everything else (auth:generate, db:generate,
+  migrate:remote, secret:put, deploy). See CLAUDE.md for architecture.
+
+project_slug:
+  type: str
+  help: "Project slug (kebab-case). Used for Cloudflare Worker name and package.json name."
+  placeholder: "my-auth-app"
+  validator: >-
+    {% if not (project_slug | regex_search('^[a-z][a-z0-9-]*$')) -%}
+    Must be lowercase letters, digits, and hyphens, starting with a letter.
+    {%- endif %}
+
+app_title:
+  type: str
+  help: "Human-readable app name shown in the page title and login card."
+  default: "{{ project_slug | replace('-', ' ') | title }}"
+
+app_tagline:
+  type: str
+  help: "One-line, user-facing description shown in the hero and the login card. Speak to your users, not about your stack."
+  default: "Instant answers, wherever you are."
+
+design_system:
+  type: str
+  help: |
+    Visual design system for the generated SPA. All three ship in
+    web/src/styles/ — you can switch later by editing the import in
+    web/src/index.css (and adding that system's fonts to web/package.json).
+  default: nothing
+  choices:
+    "Nothing — monochrome instrument panel, Doto dot-matrix display, red accent (dark + light)": nothing
+    "Apex — warm industrial paper, Archivo + JetBrains Mono, vermilion accent (dark + light)": apex
+    "Onyx — polished obsidian, Geist + Fraunces serif, sapphire accent (dark + light)": onyx
+
+worker_name:
+  type: str
+  help: "Cloudflare Worker name (appears in *.workers.dev subdomain)."
+  default: "{{ project_slug }}"
+
+d1_database_name:
+  type: str
+  help: "Cloudflare D1 database name."
+  default: "{{ project_slug }}-db"
+
+cloudflare_account_subdomain:
+  type: str
+  help: |
+    Cloudflare account subdomain — the `<sub>` in `<worker>.<sub>.workers.dev`
+    (find it in the Workers dashboard URL). Used to seed BETTER_AUTH_TRUSTED_ORIGINS
+    with `https://*.<sub>.workers.dev` so Workers Builds preview URLs pass auth
+    on the very first deploy, before mise has a chance to patch BETTER_AUTH_URL.
+    Leave empty to skip; the runtime auto-derives wildcards from BETTER_AUTH_URL
+    once it's been patched to the deployed *.workers.dev URL.
+  default: "knowsuchagency"

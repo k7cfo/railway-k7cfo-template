@@ -1,0 +1,261 @@
+// ─── MARKETING CONTENT — EDIT THIS FILE FIRST ────────────────────────────────
+// Every section of the landing page reads from this object. To make the page
+// yours: rewrite the copy here, top to bottom, before touching any component.
+// Sections hide themselves when their content is empty (e.g. an empty
+// `testimonials` array renders nothing — never ship fake social proof).
+//
+// Copy guidance (CRO):
+// - `hero.headline` is the value proposition, not your brand name — the visitor
+//   should learn what they GET, in their own vocabulary. Outcome > mechanism.
+// - One primary CTA, repeated (hero → pricing → final band). Everything else
+//   is secondary.
+// - `benefits` lead with the outcome; the mono `caption` carries the garnish.
+// - Keep a risk-reversal line ("free tier · no credit card") beside every CTA.
+// - Speak to END USERS. Implementation details (the stack, the repo, deploy
+//   commands) belong in the README and CLAUDE.md, not on this page.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type Cta = { label: string; to: string }
+
+export type MarketingContent = {
+  hero: {
+    /** Mono instrument label, top-left (decorative). */
+    eyebrow?: string
+    /** Mono label, top-right (decorative). */
+    eyebrowMeta?: string
+    /** The mega-type value proposition. Short lines, outcome-first. */
+    headline: string
+    /** One or two sentences under the headline. */
+    subhead: string
+    /** Optional supporting paragraph. */
+    body?: string
+    cta: Cta
+    /** Secondary, low-emphasis link (e.g. anchor to pricing). */
+    secondaryCta?: Cta
+    /** Trust line rendered beside the CTA. */
+    riskReversal?: string
+    /** Mono metadata segments that scramble in. Decorative texture. */
+    metadata?: string[]
+    /** Hero proof artifact. "image" renders a product screenshot in a
+     * hard-edged instrument frame — drop the file in web/public and point
+     * `src` at it (e.g. "/proof.png"). "none" hides the slot. */
+    proof:
+      | { mode: "none" }
+      | { mode: "image"; src: string; alt: string; caption?: string }
+  }
+  /** Marquee tape items. Empty array hides the ticker. */
+  ticker: string[]
+  benefits: { title: string; body: string; caption: string }[]
+  howItWorks?: {
+    heading: string
+    steps: { title: string; body: string }[]
+  }
+  stats: {
+    value: number
+    decimals?: number
+    prefix?: string
+    suffix?: string
+    label: string
+  }[]
+  /** Logos + testimonials. Both empty → section hidden. Fill with REAL proof. */
+  socialProof: {
+    heading?: string
+    logos: { name: string; href?: string }[]
+    testimonials: { quote: string; name: string; role?: string }[]
+  }
+  pricing?: {
+    heading: string
+    subhead?: string
+    plans: {
+      name: string
+      price: string
+      cadence?: string
+      description?: string
+      features: string[]
+      cta: Cta
+      featured?: boolean
+      badge?: string
+    }[]
+    footnote?: string
+  }
+  faq?: {
+    heading: string
+    items: { q: string; a: string }[]
+  }
+  finalCta: {
+    eyebrow?: string
+    headline: string
+    cta: Cta
+    caption?: string
+  }
+  footer: {
+    /** Legal / support links. Wire real hrefs per project. */
+    links: { label: string; href: string }[]
+    /** Small mono stamp on the right (e.g. a version marker). */
+    note?: string
+  }
+}
+
+// The defaults below describe the generated product (an AI assistant with
+// accounts and usage-based billing) to its END USERS — no stack names, no
+// repo links. Replace the copy with your product's story.
+export const marketing: MarketingContent = {
+  hero: {
+    eyebrow: "EXPERIMENTAL SYSTEMS",
+    eyebrowMeta: "EST · 2026",
+    headline: "Your AI assistant. Always on.",
+    subhead: "{{ app_tagline }}",
+    body: "Create an account in seconds and start a conversation instantly — answers stream in live, served from the city nearest you. Start free; pay only when your usage grows.",
+    cta: { label: "GET STARTED", to: "/signup" },
+    secondaryCta: { label: "SEE PRICING", to: "#pricing" },
+    riskReversal: "FREE TIER · NO CREDIT CARD",
+    metadata: ["ALWAYS ON · EVERYWHERE", "STREAMING RESPONSES", "V 1.0"],
+    // Swap in a real product shot once you have one:
+    // proof: { mode: "image", src: "/proof.png", alt: "Screenshot of …", caption: "LIVE PRODUCT" },
+    proof: { mode: "none" },
+  },
+
+  ticker: [
+    "INSTANT ANSWERS",
+    "STREAMING RESPONSES",
+    "SECURE ACCOUNTS",
+    "FAIR PRICING",
+    "START FREE",
+    "CANCEL ANYTIME",
+    "ALWAYS ON",
+  ],
+
+  benefits: [
+    {
+      title: "FAST FROM ANYWHERE",
+      body: "Served from 330+ cities worldwide, so answers start streaming before you finish the thought.",
+      caption: "global · low-latency",
+    },
+    {
+      title: "YOUR ACCOUNT, SECURED",
+      body: "Email + password sign-in with encrypted sessions, and a reset flow that actually works.",
+      caption: "secure sessions",
+    },
+    {
+      title: "AI ON TAP",
+      body: "Ask anything, watch the answer stream in real time. No queues, no waiting rooms.",
+      caption: "streaming ai",
+    },
+    {
+      title: "PAY FOR WHAT YOU USE",
+      body: "A generous free allotment every month. Upgrade when you need more, cancel anytime.",
+      caption: "usage-based",
+    },
+  ],
+
+  howItWorks: {
+    heading: "HOW IT WORKS",
+    steps: [
+      {
+        title: "SIGN UP",
+        body: "Create your account in under a minute. The free tier is included — no card required.",
+      },
+      {
+        title: "ASK",
+        body: "Start chatting immediately. Responses stream in live and your history stays with your account.",
+      },
+      {
+        title: "SCALE",
+        body: "Hit the free ceiling? Upgrade to Pro in two clicks and keep going. Cancel anytime.",
+      },
+    ],
+  },
+
+  stats: [
+    { value: 50, prefix: "<", suffix: "ms", label: "TYPICAL RESPONSE START" },
+    { value: 330, suffix: "+", label: "CITIES SERVING YOU" },
+    { value: 24, suffix: "/7", label: "ALWAYS ON" },
+    { value: 0, prefix: "$", label: "TO START — FREE EVERY MONTH" },
+  ],
+
+  // Ship real proof or none at all. Both arrays empty → section hidden.
+  socialProof: {
+    heading: "OPERATORS' NOTES",
+    logos: [],
+    testimonials: [],
+  },
+
+  // DEV NOTE: these plans must mirror the built-in billing
+  // (src/lib/billing/constants.ts + scripts/stripe-bootstrap.ts). If you
+  // change the plan shape there, keep this section honest.
+  pricing: {
+    heading: "PRICING",
+    subhead: "Start free. Upgrade when your usage does.",
+    plans: [
+      {
+        name: "FREE",
+        price: "$0",
+        cadence: "/month",
+        description: "Everything you need to get started, free every month.",
+        features: [
+          "Secure account & sign-in",
+          "50,000 AI tokens every month",
+          "Streaming chat",
+          "Zero setup",
+        ],
+        cta: { label: "START FREE", to: "/signup" },
+      },
+      {
+        name: "PRO",
+        price: "$20",
+        cadence: "/month",
+        description: "For daily use — more headroom, same speed.",
+        features: [
+          "Everything in Free",
+          "1,000,000 AI tokens included",
+          "$5 per additional 1M tokens",
+          "Pay only for what you use",
+          "Cancel any time",
+        ],
+        cta: { label: "GET STARTED", to: "/signup" },
+        featured: true,
+        badge: "MOST POPULAR",
+      },
+    ],
+    footnote:
+      "Prices in USD. Cancel anytime — you keep Pro until the end of the paid period.",
+  },
+
+  faq: {
+    heading: "QUESTIONS",
+    items: [
+      {
+        q: "Is there a free plan?",
+        a: "Yes — every account includes 50,000 AI tokens each month, free. No credit card required to sign up.",
+      },
+      {
+        q: "What happens when I hit the free limit?",
+        a: "Chat pauses until your allotment resets next month — or upgrade to Pro and keep going immediately. You're never billed by surprise.",
+      },
+      {
+        q: "Can I cancel Pro anytime?",
+        a: "Yes. Cancel in one click from the billing page. You keep Pro access until the end of the period you've paid for.",
+      },
+      {
+        q: "Is my data private?",
+        a: "Your conversations belong to your account alone, behind encrypted sessions. We don't sell your data.",
+      },
+    ],
+  },
+
+  finalCta: {
+    eyebrow: "GET STARTED",
+    headline: "Your first answer is seconds away.",
+    cta: { label: "GET STARTED", to: "/signup" },
+    caption: "NO CREDIT CARD · FREE EVERY MONTH",
+  },
+
+  footer: {
+    links: [
+      { label: "PRIVACY", href: "#" },
+      { label: "TERMS", href: "#" },
+      { label: "CONTACT", href: "#" },
+    ],
+    note: "V.01",
+  },
+}

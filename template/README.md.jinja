@@ -1,0 +1,123 @@
+# {{ app_title }}
+
+Cloudflare Worker that serves [Better Auth](https://better-auth.com) and a shadcn/ui login SPA, backed by [Cloudflare D1](https://developers.cloudflare.com/d1/). Generated from the [cloudflare-better-auth-d1 copier template](https://copier.readthedocs.io/).
+
+- Hono Worker with Better Auth mounted at `/api/auth/*`, `drizzle-orm/d1` adapter
+- Vite React SPA served via the Worker's `assets` binding, gated so `/api/*` runs on the Worker
+- Generated drizzle schema + SQL migration for the better-auth (+ stripe plugin) tables
+- Streaming AI chat on Workers AI (llama-4-scout) with shadcn chat components
+- Stripe billing: Pro subscription ($20/mo, 1M tokens included) with per-token overage via
+  Billing Meters, plus a free 50k-tokens/month tier — dormant until you add a Stripe key
+
+## Quickstart
+
+All project commands are defined as [mise](https://mise.jdx.dev/) tasks. If you don't have mise, `curl https://mise.run | sh` or `brew install mise`.
+
+Copier already ran `mise trust`, `mise install`, and the JS installs when it rendered this project, so bun + node are pinned and dependencies are in place. What's left:
+
+```bash
+bunx wrangler login           # one-time CF auth (interactive — see below for headless)
+mise init                     # seeds .dev.vars, applies local migrations,
+                              # provisions remote D1 + BETTER_AUTH_SECRET,
+                              # applies remote migrations
+mise dev                      # http://localhost:8787
+mise deploy                   # ship to *.workers.dev
+```
+
+`init` only provisions remote resources when wrangler is already authenticated. If you skipped `wrangler login`, it prints a hint and moves on — run `mise run d1:create && mise run secret:put && mise run migrate:remote` yourself once you've logged in. `d1:create` and `secret:put` require `jq`.
+
+### Billing (optional)
+
+The app runs fine without Stripe — sign-up works and chat uses the free tier. To turn on subscriptions with metered overage:
+
+```bash
+# sandbox key from https://dashboard.stripe.com/test/apikeys → .dev.vars (STRIPE_SECRET_KEY)
+mise run stripe:bootstrap     # creates the meter, Pro product, and prices; patches
+                              # STRIPE_*_PRICE_ID into wrangler.jsonc (idempotent)
+mise run stripe:secrets       # uploads STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET to the Worker
+mise run stripe:bootstrap -- --url https://your-app.example   # webhook endpoint (after deploy)
+```
+
+Local webhooks: `stripe listen --forward-to localhost:8787/api/auth/stripe/webhook`. See `CLAUDE.md` § Billing for the architecture.
+
+### Headless auth (no browser)
+
+`bunx wrangler login` fails on a headless box with `Missing file or directory: xdg-open`. Instead, export credentials as env vars (either a scoped `CLOUDFLARE_API_TOKEN` — preferred, create at <https://dash.cloudflare.com/profile/api-tokens> with Workers Scripts:Edit + D1:Edit + Secrets:Edit — or the `CLOUDFLARE_API_KEY` + `CLOUDFLARE_EMAIL` global-key pair) and pass `--headless` to `init`:
+
+```bash
+export CLOUDFLARE_API_TOKEN=...
+mise init --headless          # validates via `wrangler whoami`, then provisions D1,
+                              # uploads the auth secret, and applies remote migrations
+```
+
+With a secret manager like [fnox](https://github.com/jdx/fnox): `fnox exec -- mise init --headless`.
+
+### Push to a new private GitHub repo
+
+Pass `--github` to `init` to `git init` (if needed), stage + commit the template content, create a private GitHub repo named `{{ project_slug }}`, and push `main` with upstream set. Requires the [gh CLI](https://cli.github.com) authenticated (`gh auth login`). Combine with `--headless` if you want both in one shot: `mise init --headless --github`.
+
+## Tasks
+
+Run `mise tasks` for the full list. Highlights:
+
+| Task | What it does |
+|---|---|
+| `mise run dev` | Build the SPA (if stale) and start `wrangler dev` |
+| `mise run web:build` | Build the Vite SPA into `web/dist` (source-tracked — re-runs only when inputs change) |
+| `mise run typecheck` | Typecheck Worker + web |
+| `mise run auth:generate` | Regenerate `src/db/schema.ts` from `better-auth.config.ts` |
+| `mise run db:generate` | `drizzle-kit generate` (emit SQL from the new schema) |
+| `mise run migrate:local` / `migrate:remote` | Apply D1 migrations |
+| `mise run d1:replicate` | Enable D1 read replication (mode=auto) on the prod database (idempotent) |
+| `mise run logpush:setup` | Create R2 bucket `{{ project_slug }}-logs` + Logpush job for Worker trace events (opt-in; idempotent) |
+| `mise run secret:put` | Ensure `BETTER_AUTH_SECRET` is set on the remote Worker (idempotent) |
+| `mise run stripe:bootstrap` | Create Stripe meter/product/prices, patch price IDs into `wrangler.jsonc` (idempotent) |
+| `mise run stripe:secrets` | Upload `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` from `.dev.vars` to the Worker |
+| `mise run deploy` | Build the SPA and `wrangler deploy` |
+| `mise run teardown` | Delete the remote Worker and D1 database (irreversible) |
+
+`mise init` runs `d1:replicate` automatically when wrangler is authenticated (replicas are free). `logpush:setup` is **opt-in** — the Worker is logpush-eligible (`logpush: true` in `wrangler.jsonc`) but no R2 archive job is created until you ask for it. Run `mise run logpush:setup` when you want long-term retention beyond Workers Logs' 7-day window, off-vendor analytics, or compliance/SIEM ingestion. See `CLAUDE.md` § Observability for the cost math and the empirical "Logpush is downstream of head sampling" finding.
+
+## Deploy
+
+### First deploy — local
+
+```bash
+mise deploy
+```
+
+On the first deploy, `mise deploy` captures the `*.workers.dev` URL that wrangler prints, patches `vars.BETTER_AUTH_URL` in `wrangler.jsonc`, and redeploys once so Better Auth sees a matching origin. For a custom domain, edit `vars.BETTER_AUTH_URL` yourself before the first deploy and the auto-patch stays out of the way.
+
+`mise init` already uploaded `BETTER_AUTH_SECRET` and applied remote migrations. Use `mise run secret:put` to rotate the secret (skips when already set — delete it in the dashboard first to force a new one).
+
+### Ongoing — push to deploy
+
+Once the repo lives on GitHub (`mise init --github` does this in one shot), wire [Cloudflare Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/):
+
+```bash
+mise run builds:connect
+```
+
+That task calls the Cloudflare API to attach the repo to `{{ worker_name }}` and creates two triggers:
+
+- **`main`** → `bun run ci:build` → `wrangler deploy` (installs deps, builds the SPA, applies remote D1 migrations, deploys production)
+- **`preview`** (all other branches) → `bun run ci:build:preview` → `wrangler versions upload` (same build minus migrations, producing a preview-only version)
+
+`builds:connect` is idempotent — re-runs are no-ops. It needs `CLOUDFLARE_API_TOKEN` (or `CLOUDFLARE_API_KEY` + `CLOUDFLARE_EMAIL`) in the environment and an authenticated `gh`.
+
+**One-time prerequisite.** The [Cloudflare Workers & Pages GitHub App](https://github.com/apps/cloudflare-workers-and-pages) must be installed on the repo's owner (user or org). If it isn't, `builds:connect` prints the install link and exits. You do this once per GH account/org, ever.
+
+**What you get.** `preview_urls: true` in `wrangler.jsonc` (already set) means every version gets two stable URLs:
+
+- `https://<version-id>-{{ worker_name }}.<subdomain>.workers.dev` — pinned to that commit
+- `https://<branch>-{{ worker_name }}.<subdomain>.workers.dev` — follows the branch
+
+When a PR is open, Workers Builds comments both URLs on it automatically.
+
+**Durable Objects fallback.** Workers Builds disables those preview URLs whenever the Worker has a DO binding. The repo ships `.github/workflows/preview.yml` to cover that case: when `wrangler.jsonc` declares `durable_objects.bindings`, each PR commit deploys to a Worker named `{{ worker_name }}-pr-<n>` and the URL is sticky-commented on the PR (`preview-cleanup.yml` deletes it on close). Without DOs the workflow no-ops. Set `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit + D1: Edit) — or `CLOUDFLARE_API_KEY` + `CLOUDFLARE_EMAIL` as a global-key fallback — plus `CLOUDFLARE_ACCOUNT_ID` in repo secrets to enable it.
+
+**Preview builds skip `db:migrate:remote` on purpose** — in-flight PR migrations don't land in the shared production D1. Preview branches run against the *current* schema, so features depending on a new column won't fully work in preview until the PR merges and `main` deploys. Keep schema changes forward-compatible with the deployed Worker either way (destructive drops = two pushes).
+
+`mise run migrate:remote` and `mise deploy` both remain as local escape hatches.
+
+See `CLAUDE.md` for the full architecture, schema-generation flow, and auth-specific gotchas.
