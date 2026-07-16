@@ -1,0 +1,11 @@
+# {{ app_title }} owner guide
+
+Run `pnpm setup` once, then `pnpm dev`; open `http://localhost:5173`. Stop with Ctrl-C and restart with `pnpm dev`. View PostgreSQL logs with `docker compose logs -f postgres`; view application logs in the terminal running `pnpm dev`.
+
+Add a local variable to ignored `.env`, then restart. For 1Password, copy `.env.op.example` to `.env.op`, point entries at your vault items, and run `op run --env-file=.env.op -- pnpm dev`.
+
+Run migrations with `pnpm db:migrate`; create them after schema changes with `pnpm db:generate`. Never use `db:reset` on valuable data. Invite people under Settings → Members. Workspace owners/admins can change member roles; platform admin/support access is stored on the product profile and should be granted through an audited administrative script or database operation until your product adds a dedicated super-admin flow.
+
+Manage support under Administration → Support. Update pricing by creating Stripe products/prices in your Stripe account and setting `STRIPE_PRICE_ID`; never hardcode real IDs. Deploy by following `docs/RAILWAY.md`. Roll back by redeploying the last known-good Railway deployment; database schema rollback requires an intentional compensating migration.
+
+Before asking an AI coding agent for changes, describe the user outcome and constraints in plain language. The agent will read `AGENTS.md` and `docs/PRODUCT.md`, ask a short product interview for new ideas, implement a complete workflow, update migrations/tests/docs, and run quality gates.

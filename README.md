@@ -1,43 +1,27 @@
-# cloudflare-better-auth-d1 (copier template)
+# Portable SaaS Template
 
-[Copier](https://copier.readthedocs.io/) template for a Cloudflare Worker that serves Better Auth + a shadcn/ui login SPA, backed by Cloudflare D1.
+A Railway-first, cloud-portable Copier template for generating a polished modular-monolith SaaS application. Each generated app runs a Hono API and React SPA together in one Node.js container, backed by PostgreSQL.
 
-Generated projects contain:
-- Hono Worker with Better Auth mounted at `/api/auth/*`, `drizzle-orm/d1` adapter
-- Vite React SPA (shadcn preset `buFznsW`, radix-lyra, phosphor icons) served via the Worker's `assets` binding
-- Generated drizzle schema + SQL migration for the four better-auth tables (user, session, account, verification)
-- `wrangler.jsonc` with D1 binding, SPA fallback, and `run_worker_first: ["/api/*"]`
+This project was derived from [knowsuchagency/cloudflare-template](https://github.com/knowsuchagency/cloudflare-template). Its Nothing, Apex, and Onyx design systems, shadcn/Radix components, typography, and visual character are retained. The upstream repository did not include a standalone license file at import time; see `docs/UPSTREAM.md` for provenance. Existing upstream notices remain intact.
 
-## Usage
+## Generate an application
 
 ```bash
-uvx copier copy gh:<owner>/<this-repo> ./my-auth-app
-# or from a local checkout:
-uvx copier copy path/to/this-template ./my-auth-app
+uvx copier copy --trust /absolute/path/to/portable-saas-template /absolute/path/to/new-app
 ```
 
-You'll be asked for:
-- `project_slug` — kebab-case name for the Worker and package
-- `app_title` / `app_tagline` — text shown in the login card
-- `worker_name` / `d1_database_name` — defaults derived from `project_slug`
+Or:
 
-Post-generation, copier runs `bun install`, `cd web && bun install && bun run build`, and `wrangler types`. Follow the message printed afterwards to create the D1 database and deploy.
-
-## Self-hosting strategy
-
-The default rendered project is vanilla Cloudflare + D1 — right for ~90% of projects. When it isn't, a rendered project can move selected pieces (DB, object storage, runtime) onto your own infra without a rewrite. [`docs/`](docs/) documents each escape hatch:
-
-- [`docs/self-hosted-database.md`](docs/self-hosted-database.md) — swap D1 for self-hosted Postgres reached by the Worker via Hyperdrive + a Cloudflare Tunnel (Worker stays).
-- [`docs/self-hosted-runtime.md`](docs/self-hosted-runtime.md) — swap the Worker for a Bun + Hono container on Dokploy serving both `/api/*` and the SPA.
-- [`docs/self-hosted-object-storage.md`](docs/self-hosted-object-storage.md) — add an S3-compatible gateway (versitygw) reached by the Worker over a Workers VPC `vpc_services` binding on the same tunnel.
-
-Each doc describes the pattern, trade-offs, and order of operations, and links to the working reference in [`knowsuchagency/vpc-test`](https://github.com/knowsuchagency/vpc-test) for the drop-in files. See [`docs/README.md`](docs/README.md) for the decision framework (when to reach for each).
-
-## Developing this template
-
-The template source lives under `template/`. Files ending in `.jinja` are rendered; everything else is copied verbatim.
-
-Regenerate into a scratch dir to smoke-test:
 ```bash
-uvx copier copy --trust . /tmp/smoke-test --data project_slug=smoke-test
+./bin/new-app /absolute/path/to/new-app
+```
+
+Then run `pnpm setup` and `pnpm dev` in the generated app. See `OWNER_GUIDE.md` in the generated project.
+
+## Develop the template
+
+The renderable project is in `template/`. Files ending in `.jinja` are rendered by Copier; other files are copied as-is. Generate a disposable app before committing template changes:
+
+```bash
+uvx copier copy --trust --defaults --data project_slug=smoke-test . /tmp/smoke-test
 ```

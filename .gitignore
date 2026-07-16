@@ -1,22 +1,15 @@
-.cf-env.sh
-.dev.vars
-
-# ephemeral smoke-test outputs
-/smoke-*/
-/tmp-generated/
-
-# wrangler cache from dev commands run at repo root
-/.wrangler/
-
-# editor / tooling
+.env
+.env.local
+.env.op
+.env.*.local
+*.pem
+*.key
+node_modules/
+dist/
+web/dist/
 .DS_Store
-
-# If you develop the template by running its own wrangler/bun toolchain
-# from within template/, those artifacts land here:
-template/node_modules/
-template/web/node_modules/
-template/web/dist/
-template/.wrangler/
-template/.dev.vars
-template/.copier-answers.yml
-template/worker-configuration.d.ts
+.copier-smoke/
+playwright-report/
+test-results/
+coverage/
+*.log

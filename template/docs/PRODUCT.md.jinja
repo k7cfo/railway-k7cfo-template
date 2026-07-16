@@ -1,0 +1,20 @@
+# Product brief — {{ app_title }}
+
+## Promise
+
+{{ app_tagline }}
+
+{{ app_description }}
+
+## Starter assumptions
+
+- Primary user: a technically comfortable product owner and their invited collaborators.
+- Buyer: the workspace owner.
+- First-session success: register, finish onboarding, and complete the dashboard's first meaningful action.
+- Repeated workflow: intentionally left as the first product-specific workflow to replace.
+- Personas: builder, operator, leader, and explorer. They adapt experience, never access.
+- Collaboration: personal workspaces always; team UI is {{ "visible" if include_team_workspaces else "hidden by default" }}.
+- Billing: {{ "optional Stripe scaffolding is visible" if include_billing else "disabled until intentionally enabled" }}.
+- Launch scope: one container, one PostgreSQL service, one domain, Railway first and portable elsewhere.
+
+Replace these assumptions through the new-idea interview described in `AGENTS.md` before building a specific product.

@@ -1,0 +1,32 @@
+import { randomBytes } from "node:crypto";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+
+function run(command, args, optional = false) {
+  const result = spawnSync(command, args, { stdio: "inherit" });
+  if (result.status !== 0 && !optional) { console.error(`Could not run: ${command} ${args.join(" ")}`); process.exit(result.status ?? 1); }
+  return result.status === 0;
+}
+console.log("Setting up {{ app_title }}…");
+run("pnpm", ["install"]);
+for (const [command, fix] of [["node", "Install Node.js 22 LTS."], ["pnpm", "Run: corepack enable"], ["docker", "Install and start Docker Desktop or Docker Engine."]]) {
+  if (!run(command, ["--version"], true)) { console.error(`${command} is missing. ${fix}`); process.exit(1); }
+}
+if (!existsSync(".env")) {
+  let value = readFileSync(".env.example", "utf8");
+  value = value.replace("development-only-change-this-secret-32-chars", randomBytes(32).toString("base64url"));
+  writeFileSync(".env", value, { mode: 0o600 });
+  console.log("Created .env with a new local-only authentication secret.");
+} else console.log("Kept existing .env unchanged.");
+run("docker", ["compose", "up", "-d", "postgres"]);
+let ready = false;
+for (let attempt = 0; attempt < 30; attempt++) {
+  if (spawnSync("docker", ["compose", "exec", "-T", "postgres", "pg_isready", "-U", "postgres", "-d", "{{ project_slug | replace('-', '_') }}"]).status === 0) { ready = true; break; }
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+}
+if (!ready) { console.error("PostgreSQL did not become ready. Try: docker compose logs postgres"); process.exit(1); }
+run("pnpm", ["db:migrate"]);
+run("pnpm", ["db:seed"]);
+console.log("\nReady: http://localhost:5173");
+console.log("Development login: admin@example.com / ChangeMe123!");
+console.log("Next command: pnpm dev");

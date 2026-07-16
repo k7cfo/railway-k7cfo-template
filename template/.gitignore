@@ -1,30 +1,15 @@
-node_modules/
-dist/
-out/
-.DS_Store
-
-# cloudflare workers
-.wrangler/
-worker-configuration.d.ts
-
-# env + secrets
-.dev.vars
 .env
 .env.local
-.cf-env.sh
-.cf-logpush-r2-creds.json
-
-# web/
-web/node_modules/
+.env.op
+.env.*.local
+*.pem
+*.key
+node_modules/
+dist/
 web/dist/
-web/.vite/
-
-# copier metadata (keep .copier-answers.yml committed so users can `copier update`)
-# .copier-answers.yml   <- do NOT ignore; it records the template version/inputs
-
-# caches
-.cache
-*.tsbuildinfo
-
-# Claude Code per-session local state (scheduled task locks, plans, etc.)
-.claude/
+.data/
+coverage/
+playwright-report/
+test-results/
+*.log
+.DS_Store

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$#" -ne 1 ]; then
+  echo "Usage: ./bin/new-app /absolute/path/to/new-app" >&2
+  exit 2
+fi
+
+case "$1" in
+  /*) ;;
+  *) echo "Destination must be an absolute path." >&2; exit 2 ;;
+esac
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+exec uvx copier copy --trust "$ROOT" "$1"

@@ -1,0 +1,20 @@
+import { eq } from "drizzle-orm";
+import { auth } from "../src/auth.js";
+import { db, pool } from "../src/db/index.js";
+import { user, userProfiles } from "../src/db/schema.js";
+
+const email = "admin@example.com";
+const password = "ChangeMe123!";
+let userId: string | undefined;
+try {
+  const result = await auth.api.signUpEmail({ body: { name: "Demo Admin", email, password } });
+  userId = result.user.id;
+} catch (error) {
+  if (!(error instanceof Error) || !error.message.toLowerCase().includes("exist")) throw error;
+  userId = (await db.query.user.findFirst({ where: eq(user.email, email) }))?.id;
+}
+if (userId) await db.update(userProfiles).set({ systemRole: "admin", persona: "builder" }).where(eq(userProfiles.userId, userId));
+console.info("Development seed complete.");
+console.info(`Login: ${email}`);
+console.info(`Password: ${password}`);
+await pool.end();
