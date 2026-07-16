@@ -1,0 +1,71 @@
+---
+name: Template quality gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: app_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d app_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CI: true
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/app_test
+      BETTER_AUTH_SECRET: ci-only-better-auth-secret-at-least-32-characters
+      BETTER_AUTH_URL: http://localhost:3000
+      APP_URL: http://localhost:5173
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Generate a clean application
+        run: >-
+          uvx copier copy --trust --defaults
+          --data project_slug=template-quality-smoke
+          "$GITHUB_WORKSPACE" "$RUNNER_TEMP/generated-app"
+      - name: Install frozen dependencies
+        working-directory: ${{ runner.temp }}/generated-app
+        run: pnpm install --frozen-lockfile
+      - name: Migrate and seed PostgreSQL
+        working-directory: ${{ runner.temp }}/generated-app
+        run: pnpm db:migrate && pnpm db:seed
+      - name: Run static, unit, and production build checks
+        working-directory: ${{ runner.temp }}/generated-app
+        run: pnpm check
+      - name: Install Chromium
+        working-directory: ${{ runner.temp }}/generated-app
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run desktop and mobile workflows
+        working-directory: ${{ runner.temp }}/generated-app
+        run: pnpm test:e2e
+      - name: Run compiled-server and deployment checks
+        working-directory: ${{ runner.temp }}/generated-app
+        run: pnpm test:smoke && pnpm deploy:check
+      - name: Build the production container
+        working-directory: ${{ runner.temp }}/generated-app
+        run: docker build --tag generated-app:quality-gate .
