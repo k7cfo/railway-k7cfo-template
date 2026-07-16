@@ -10,3 +10,4 @@
 - Review email sender/domain, storage durability, Stripe products/prices/webhook, and data retention if enabled.
 - Test mobile navigation, keyboard use, 404/error pages, account recovery, support, and admin authorization.
 - Deploy into a clean Railway project and verify `/health`, `/ready`, and SPA fallback.
+- If private Tailscale access is part of the launch, review tailnet grants and run `pnpm tailscale:check` from an authorized device.

@@ -76,7 +76,7 @@ try {
   child.kill("SIGTERM");
   await Promise.race([
     new Promise((resolve) => child.once("exit", resolve)),
-    new Promise((resolve) => setTimeout(resolve, 10_000)),
+    new Promise((resolve) => setTimeout(resolve, 10_000).unref()),
   ]);
   if (child.exitCode === null) child.kill("SIGKILL");
 }

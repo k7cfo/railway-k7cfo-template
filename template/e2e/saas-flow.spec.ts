@@ -20,11 +20,18 @@ test("registration, onboarding, dashboard, settings, support, and sign out", asy
   await page.getByLabel("Job title").fill("Test Operator");
   await page.getByRole("button", { name: /save profile/i }).click();
   await expect(page.getByText("Profile saved.")).toBeVisible();
+  const servicesResponse = await page.request.get("/api/services");
+  expect(servicesResponse.ok()).toBe(true);
+  const serviceStates = Object.values((await servicesResponse.json()).services);
+  expect(serviceStates).toHaveLength(4);
+  for (const state of serviceStates) expect(["connected", "unconfigured", "unavailable"]).toContain(state);
   await page.goto("/support/new");
   await page.getByLabel("Subject").fill("Playwright support request");
   await page.getByLabel("Message").fill("This ticket proves the complete support workflow works.");
   await page.getByRole("button", { name: /create ticket/i }).click();
   await expect(page.getByRole("heading", { name: "Playwright support request" })).toBeVisible();
+  const adminResponse = await page.request.get("/api/admin/overview");
+  expect(adminResponse.status()).toBe(403);
   await page.getByRole("button", { name: /user menu/i }).click();
   await page.getByRole("button", { name: /sign out/i }).click();
   await expect(page).toHaveURL(/sign-in/);

@@ -1,6 +1,6 @@
 # railway-k7cfo-template
 
-A Railway-first, cloud-portable Copier template for shipping polished SaaS applications. Each generated app runs a Hono API and React SPA together in one Node.js container, backed by PostgreSQL and ready for Docker deployment.
+A Railway-first, cloud-portable Copier template for shipping polished SaaS applications. Each generated app runs a Hono API and React SPA together in one Node.js container, backed by PostgreSQL and ready for Docker deployment. Optional Tailscale tooling provides private HTTPS development and self-hosted access without coupling application code to a network vendor.
 
 Generated apps include a single `pnpm verify` quality gate for formatting, linting, strict types, dead-code detection, unit/API/browser tests, the production build, and production-server smoke testing. A GitHub Actions workflow can block Railway deployment until those checks pass.
 

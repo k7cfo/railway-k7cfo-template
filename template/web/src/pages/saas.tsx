@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, LifeBuoy, Plus, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import {
@@ -102,8 +102,10 @@ export function OnboardingPage() {
   const [displayName, setDisplayName] = useState("");
   const [persona, setPersona] = useState("builder");
   const [intendedUse, setIntendedUse] = useState("");
+  const initialized = useRef(false);
   useEffect(() => {
-    if (me.data) {
+    if (me.data && !initialized.current) {
+      initialized.current = true;
       setDisplayName(me.data.profile.displayName);
       setPersona(me.data.profile.persona || "builder");
       const found = onboardingSteps.indexOf(

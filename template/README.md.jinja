@@ -21,8 +21,10 @@ Open `http://localhost:5173` and sign in with the development credentials printe
 
 ```bash
 pnpm doctor
+pnpm dev:tailscale
 pnpm check
 pnpm verify
+pnpm tailscale:check
 pnpm db:generate
 pnpm db:migrate
 pnpm db:studio
@@ -33,7 +35,7 @@ pnpm deploy:check
 
 `pnpm verify` is the required pre-deployment gate. It runs linting, strict types, tests, dead-code detection, a production build, browser tests, and a production-server smoke test. `db:reset` refuses to run in production. Seeds are never automatic in production.
 
-Read `OWNER_GUIDE.md` for operations, `AGENTS.md` before agent-assisted work, `docs/QUALITY.md` for the quality gate, `docs/ARCHITECTURE.md` for boundaries, `docs/SECRETS.md` for 1Password, and `docs/RAILWAY.md` to deploy.
+Read `OWNER_GUIDE.md` for operations, `AGENTS.md` before agent-assisted work, `docs/QUALITY.md` for the quality gate, `docs/TAILSCALE.md` for private tailnet access, `docs/ARCHITECTURE.md` for boundaries, `docs/SECRETS.md` for 1Password, and `docs/RAILWAY.md` to deploy.
 
 ## Included product shell
 
