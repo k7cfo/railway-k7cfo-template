@@ -72,6 +72,8 @@ export function createApp() {
     return c.json({ user: { id: user.id, name: user.name, email: user.email, image: user.image }, profile, preferences, onboarding, workspaces: memberships, config: appConfig });
   });
 
+  app.get("/api/services", (c) => c.json({ services: { ai: getAiProvider().status, email: getEmailProvider().status, storage: getObjectStorage().status, billing: billingStatus } }));
+
   app.patch("/api/profile", async (c) => {
     const { user } = c.get("session");
     const data = body(z.object({ displayName: z.string().min(1).max(80), bio: z.string().max(500).default(""), jobTitle: z.string().max(100).default(""), timezone: z.string().min(1).max(80), persona: z.enum(s.personaEnum.enumValues).nullable() }), await c.req.json());
@@ -285,14 +287,38 @@ export function createApp() {
     const { user } = c.get("session"); const data = body(z.object({ workspaceId: z.string().uuid() }), await c.req.json()); await requireWorkspaceRole(user.id, data.workspaceId, "admin");
     if (!appConfig.features.billing || billingStatus !== "connected") return c.json({ error: "Billing is not configured." }, 503);
     const customer = await db.query.billingCustomers.findFirst({ where: eq(s.billingCustomers.workspaceId, data.workspaceId) });
-    const checkout = await stripeClient().checkout.sessions.create({ mode: "subscription", line_items: [{ price: requirePriceId(), quantity: 1 }], customer: customer?.providerCustomerId || undefined, customer_email: customer?.providerCustomerId ? undefined : user.email, success_url: `${env.APP_URL}/settings/billing?checkout=success`, cancel_url: `${env.APP_URL}/settings/billing?checkout=cancelled`, metadata: { workspaceId: data.workspaceId } });
+    const checkout = await stripeClient().checkout.sessions.create({ mode: "subscription", line_items: [{ price: requirePriceId(), quantity: 1 }], customer: customer?.providerCustomerId || undefined, customer_email: customer?.providerCustomerId ? undefined : user.email, success_url: `${env.APP_URL}/settings/billing?checkout=success`, cancel_url: `${env.APP_URL}/settings/billing?checkout=cancelled`, metadata: { workspaceId: data.workspaceId }, subscription_data: { metadata: { workspaceId: data.workspaceId } } });
     return c.json({ url: checkout.url });
+  });
+
+  app.get("/api/billing/:workspaceId", async (c) => {
+    const { user } = c.get("session"); const workspaceId = c.req.param("workspaceId"); await requireWorkspaceRole(user.id, workspaceId);
+    const state = await db.query.billingCustomers.findFirst({ where: eq(s.billingCustomers.workspaceId, workspaceId) });
+    const paid = state?.subscriptionStatus === "active" || state?.subscriptionStatus === "trialing";
+    return c.json({ billing: state, entitlements: { paid, premiumFeatures: paid } });
+  });
+
+  app.post("/api/billing/portal", async (c) => {
+    const { user } = c.get("session"); const data = body(z.object({ workspaceId: z.string().uuid() }), await c.req.json()); await requireWorkspaceRole(user.id, data.workspaceId, "admin");
+    const state = await db.query.billingCustomers.findFirst({ where: eq(s.billingCustomers.workspaceId, data.workspaceId) });
+    if (!appConfig.features.billing || billingStatus !== "connected" || !state?.providerCustomerId) return c.json({ error: "A Stripe customer is not configured for this workspace." }, 503);
+    const portal = await stripeClient().billingPortal.sessions.create({ customer: state.providerCustomerId, return_url: `${env.APP_URL}/settings/billing` });
+    return c.json({ url: portal.url });
   });
 
   app.post("/api/billing/webhook", async (c) => {
     if (!env.STRIPE_WEBHOOK_SECRET) return c.json({ error: "Billing webhook is not configured." }, 503);
     const signature = c.req.header("stripe-signature"); if (!signature) return c.json({ error: "Missing Stripe signature" }, 400);
     const event = stripeClient().webhooks.constructEvent(await c.req.text(), signature, env.STRIPE_WEBHOOK_SECRET);
+    const object = event.data.object as unknown as { id: string; customer?: string | { id: string } | null; subscription?: string | { id: string } | null; status?: string; cancel_at_period_end?: boolean; current_period_end?: number; metadata?: { workspaceId?: string } };
+    const workspaceId = object.metadata?.workspaceId;
+    if (workspaceId && event.type === "checkout.session.completed") {
+      await db.update(s.billingCustomers).set({ providerCustomerId: typeof object.customer === "string" ? object.customer : object.customer?.id, providerSubscriptionId: typeof object.subscription === "string" ? object.subscription : object.subscription?.id }).where(eq(s.billingCustomers.workspaceId, workspaceId));
+    }
+    if (workspaceId && (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted")) {
+      const active = object.status === "active" || object.status === "trialing";
+      await db.update(s.billingCustomers).set({ providerSubscriptionId: object.id, plan: active ? "paid" : "free", subscriptionStatus: object.status || "inactive", cancelAtPeriodEnd: object.cancel_at_period_end || false, currentPeriodEnd: object.current_period_end ? new Date(object.current_period_end * 1000) : null }).where(eq(s.billingCustomers.workspaceId, workspaceId));
+    }
     return c.json({ received: true, type: event.type });
   });
 

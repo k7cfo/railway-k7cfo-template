@@ -22,7 +22,7 @@ export interface EmailProvider {
 class ConsoleEmailProvider implements EmailProvider {
   readonly status = "connected" as const;
   async send(message: EmailMessage) {
-    console.info(`[email:${message.template}] to=${message.to} subject=${message.subject}`);
+    console.info(`[email:${message.template}] to=${message.to} subject=${message.subject}`, message.data);
   }
 }
 

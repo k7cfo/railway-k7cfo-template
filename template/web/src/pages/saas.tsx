@@ -375,41 +375,9 @@ export function SettingsPage() {
       </section>
     );
   else if (section === "members") content = <MembersSettings workspaceId={workspace.id} />;
-  else if (section === "integrations")
-    content = (
-      <section className="panel">
-        <IntegrationStatus
-          name="AI"
-          status={me.data.config.features.ai ? "unconfigured" : "unavailable"}
-          description="Configure a server-side OpenAI or Anthropic key, or keep the mock provider."
-        />
-        <IntegrationStatus
-          name="Email"
-          status={me.data.config.features.email ? "unconfigured" : "unavailable"}
-          description="Console email works in development; configure Resend for delivery."
-        />
-        <IntegrationStatus
-          name="Object storage"
-          status={me.data.config.features.storage ? "unconfigured" : "unavailable"}
-          description="Local development storage is temporary. Configure S3 or R2 in production."
-        />
-      </section>
-    );
+  else if (section === "integrations") content = <ServicesSettings features={me.data.config.features} />;
   else if (section === "billing")
-    content = (
-      <section className="panel">
-        <PageHeader
-          title="Free plan"
-          description="The application works fully with billing disabled. No successful subscription is implied."
-        />
-        <IntegrationStatus
-          name="Stripe"
-          status={me.data.config.features.billing ? "unconfigured" : "unavailable"}
-          description="Add Stripe keys and your own price ID before checkout is available."
-        />
-        <UpgradePrompt />
-      </section>
-    );
+    content = <BillingSettings workspaceId={workspace.id} enabled={me.data.config.features.billing} />;
   else if (section === "security")
     content = (
       <section className="panel">
@@ -507,6 +475,86 @@ function AccountSettings({ email }: { email: string }) {
       >
         Delete account permanently
       </button>
+    </section>
+  );
+}
+type ServiceState = "connected" | "unconfigured" | "unavailable" | "error";
+function useServices() {
+  return useQuery({
+    queryKey: ["service-status"],
+    queryFn: () =>
+      api<{ services: Record<"ai" | "email" | "storage" | "billing", ServiceState> }>("/api/services"),
+  });
+}
+function ServicesSettings({ features }: { features: Record<string, boolean> }) {
+  const services = useServices();
+  if (services.isLoading) return <LoadingState />;
+  if (!services.data) return <ErrorState error={services.error} />;
+  return (
+    <section className="panel">
+      <IntegrationStatus
+        name="AI"
+        status={features.ai ? services.data.services.ai : "unavailable"}
+        description="Mock is connected for development; OpenAI and Anthropic keys stay server-side."
+      />
+      <IntegrationStatus
+        name="Email"
+        status={features.email ? services.data.services.email : "unavailable"}
+        description="Console email works in development; Resend provides production delivery."
+      />
+      <IntegrationStatus
+        name="Object storage"
+        status={features.storage ? services.data.services.storage : "unavailable"}
+        description="Local storage is development-only; configure durable S3 or R2 for production."
+      />
+    </section>
+  );
+}
+function BillingSettings({ workspaceId, enabled }: { workspaceId: string; enabled: boolean }) {
+  const services = useServices();
+  const state = useQuery({
+    queryKey: ["billing", workspaceId],
+    queryFn: () =>
+      api<{
+        billing: { plan: string; subscriptionStatus: string; cancelAtPeriodEnd: boolean } | null;
+        entitlements: { paid: boolean };
+      }>(`/api/billing/${workspaceId}`),
+  });
+  const action = useMutation({
+    mutationFn: (path: "checkout" | "portal") =>
+      api<{ url: string }>(`/api/billing/${path}`, { method: "POST", body: JSON.stringify({ workspaceId }) }),
+    onSuccess: ({ url }) => {
+      window.location.href = url;
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  if (services.isLoading || state.isLoading) return <LoadingState />;
+  if (!services.data || !state.data) return <ErrorState error={services.error || state.error} />;
+  const provider = enabled ? services.data.services.billing : "unavailable";
+  const billing = state.data.billing;
+  return (
+    <section className="panel">
+      <PageHeader
+        title={state.data.entitlements.paid ? "Paid plan" : "Free plan"}
+        description={`Subscription status: ${billing?.subscriptionStatus || "inactive"}${billing?.cancelAtPeriodEnd ? " · cancels at period end" : ""}.`}
+      />
+      <IntegrationStatus
+        name="Stripe"
+        status={provider}
+        description="Checkout and the customer portal become available only after real Stripe variables and a price ID are configured."
+      />
+      {provider === "connected" ? (
+        <div className="page-actions">
+          <button
+            className="button"
+            onClick={() => action.mutate(state.data.entitlements.paid ? "portal" : "checkout")}
+          >
+            {state.data.entitlements.paid ? "Manage subscription" : "Upgrade"}
+          </button>
+        </div>
+      ) : (
+        <UpgradePrompt />
+      )}
     </section>
   );
 }
