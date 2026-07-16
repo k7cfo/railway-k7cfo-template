@@ -1,14 +1,14 @@
 // Stats band — instrument-panel numerals that tick up on scroll (CountUp).
 // The numbers are network facts about the platform the template deploys to.
 
-import { CountUp } from "@/components/motion/count-up"
-import { Reveal } from "@/components/motion/reveal"
-import { marketing } from "@/content/marketing"
+import { CountUp } from "@/components/motion/count-up";
+import { Reveal } from "@/components/motion/reveal";
+import { marketing } from "@/content/marketing";
 
-const STATS = marketing.stats
+const STATS = marketing.stats;
 
 export function StatsBand() {
-  if (STATS.length === 0) return null
+  if (STATS.length === 0) return null;
 
   return (
     <section className="grid grid-cols-2 border-t border-[var(--border-1)] lg:grid-cols-4">
@@ -26,9 +26,7 @@ export function StatsBand() {
           <div className="font-mono text-[clamp(32px,4vw,48px)] leading-none font-medium tracking-[-0.02em] text-[var(--fg-0)]">
             {stat.prefix}
             <CountUp to={stat.value} decimals={stat.decimals} />
-            {stat.suffix && (
-              <span className="text-[var(--accent)]">{stat.suffix}</span>
-            )}
+            {stat.suffix && <span className="text-[var(--accent)]">{stat.suffix}</span>}
           </div>
           <div className="font-mono text-[10px] tracking-[0.1em] text-[var(--fg-3)] uppercase">
             {stat.label}
@@ -36,5 +34,5 @@ export function StatsBand() {
         </Reveal>
       ))}
     </section>
-  )
+  );
 }

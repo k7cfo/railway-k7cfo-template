@@ -3,19 +3,16 @@
 // theme toggle. Halftone-print texture on transparent ground: the page paper
 // shows through, which keeps it looking screen-printed rather than rendered.
 
-import { Dithering } from "@paper-design/shaders-react"
-import {
-  usePrefersReducedMotion,
-  useTokenColors,
-} from "@/components/marketing/use-token-colors"
+import { Dithering } from "@paper-design/shaders-react";
+import { usePrefersReducedMotion, useTokenColors } from "@/components/marketing/use-token-colors";
 
-const TOKENS = ["--accent"] as const
+const TOKENS = ["--accent"] as const;
 
 export function HeroBackdrop() {
-  const colors = useTokenColors(TOKENS)
-  const reduced = usePrefersReducedMotion()
+  const colors = useTokenColors(TOKENS);
+  const reduced = usePrefersReducedMotion();
 
-  if (!colors) return null
+  if (!colors) return null;
 
   return (
     <div
@@ -23,10 +20,8 @@ export function HeroBackdrop() {
       className="pointer-events-none absolute -top-8 -right-24 hidden size-[520px] sm:block lg:-right-16 lg:size-[640px]"
       style={{
         // Fade the sphere's lower-left so the headline stays sovereign.
-        maskImage:
-          "radial-gradient(closest-side at 60% 40%, black 55%, transparent 100%)",
-        WebkitMaskImage:
-          "radial-gradient(closest-side at 60% 40%, black 55%, transparent 100%)",
+        maskImage: "radial-gradient(closest-side at 60% 40%, black 55%, transparent 100%)",
+        WebkitMaskImage: "radial-gradient(closest-side at 60% 40%, black 55%, transparent 100%)",
       }}
     >
       <Dithering
@@ -39,5 +34,5 @@ export function HeroBackdrop() {
         speed={reduced ? 0 : 0.55}
       />
     </div>
-  )
+  );
 }

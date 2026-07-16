@@ -2,30 +2,24 @@
 // MIT), rebuilt on motion: content fades and rises in once as it scrolls into
 // view. Uses the design-system ease — snappy, no bounce.
 
-import { motion, useReducedMotion } from "motion/react"
-import type { ReactNode } from "react"
+import { motion, useReducedMotion } from "motion/react";
+import type { ReactNode } from "react";
 
 type RevealProps = {
-  children: ReactNode
-  className?: string
+  children: ReactNode;
+  className?: string;
   /** Seconds before the transition starts once in view. */
-  delay?: number
+  delay?: number;
   /** Pixels the content rises while fading in. */
-  y?: number
-  duration?: number
-}
+  y?: number;
+  duration?: number;
+};
 
-export function Reveal({
-  children,
-  className,
-  delay = 0,
-  y = 24,
-  duration = 0.7,
-}: RevealProps) {
-  const reduced = useReducedMotion()
+export function Reveal({ children, className, delay = 0, y = 24, duration = 0.7 }: RevealProps) {
+  const reduced = useReducedMotion();
 
   if (reduced) {
-    return <div className={className}>{children}</div>
+    return <div className={className}>{children}</div>;
   }
 
   return (
@@ -38,5 +32,5 @@ export function Reveal({
     >
       {children}
     </motion.div>
-  )
+  );
 }

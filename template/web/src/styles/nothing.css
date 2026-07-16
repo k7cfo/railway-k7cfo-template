@@ -100,10 +100,8 @@
   --term-blue: var(--interactive);
 
   /* TYPE STACKS — Colophon-foundry DNA + Doto dot-matrix for hero moments */
-  --font-sans: "Space Grotesk Variable", "Space Grotesk", "DM Sans", system-ui,
-    sans-serif;
-  --font-mono: "Space Mono", "JetBrains Mono", "SF Mono", "Menlo", "Consolas",
-    monospace;
+  --font-sans: "Space Grotesk Variable", "Space Grotesk", "DM Sans", system-ui, sans-serif;
+  --font-mono: "Space Mono", "JetBrains Mono", "SF Mono", "Menlo", "Consolas", monospace;
   --font-display: "Doto Variable", "Doto", "Space Mono", monospace;
   /* Aliases for components that reference the old names. */
   --font-condensed: var(--font-sans);
@@ -318,30 +316,18 @@
 
 /* Nothing dot-matrix motif — decorative grid background. */
 @utility dot-grid {
-  background-image: radial-gradient(
-    circle,
-    var(--border-visible) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(circle, var(--border-visible) 1px, transparent 1px);
   background-size: 16px 16px;
 }
 
 @utility dot-grid-subtle {
-  background-image: radial-gradient(
-    circle,
-    var(--border) 0.5px,
-    transparent 0.5px
-  );
+  background-image: radial-gradient(circle, var(--border) 0.5px, transparent 0.5px);
   background-size: 12px 12px;
 }
 
 /* Back-compat alias for the old apex grid name. */
 @utility paper-grid {
-  background-image: radial-gradient(
-    circle,
-    var(--border-visible) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(circle, var(--border-visible) 1px, transparent 1px);
   background-size: 16px 16px;
 }
 

@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import type * as React from "react"
-import { Toaster as Sonner, type ToasterProps } from "sonner"
-import { CircleCheck, CircleX, Info, Loader, TriangleAlert } from "lucide-react"
+import type * as React from "react";
+import { Toaster as Sonner, type ToasterProps } from "sonner";
+import { CircleCheck, CircleX, Info, Loader, TriangleAlert } from "lucide-react";
 
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
@@ -14,9 +14,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         info: <Info className="size-4 text-[var(--interactive)]" />,
         warning: <TriangleAlert className="size-4 text-[var(--warning)]" />,
         error: <CircleX className="size-4 text-[var(--accent)]" />,
-        loading: (
-          <Loader className="size-4 animate-spin text-[var(--fg-2)]" />
-        ),
+        loading: <Loader className="size-4 animate-spin text-[var(--fg-2)]" />,
       }}
       style={
         {
@@ -33,7 +31,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       {...props}
     />
-  )
-}
+  );
+};
 
-export { Toaster }
+export { Toaster };

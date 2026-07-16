@@ -1,0 +1,306 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { serveStatic } from "@hono/node-server/serve-static";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
+import { auth, type Session } from "./auth.js";
+import { checkDatabase, db } from "./db/index.js";
+import * as s from "./db/schema.js";
+import { env } from "./env.js";
+import { requireSystemRole, requireWorkspaceRole } from "./lib/authz.js";
+import { getAiProvider } from "./services/ai/index.js";
+import { billingStatus, requirePriceId, stripeClient } from "./services/billing/index.js";
+import { getEmailProvider } from "./services/email/index.js";
+import { getObjectStorage } from "./services/storage/index.js";
+
+type Variables = { session: Session };
+const appConfig = {
+  title: "{{ app_title }}",
+  tagline: "{{ app_tagline }}",
+  description: "{{ app_description }}",
+  designSystem: "{{ design_system }}",
+  features: {
+    teams: {{ include_team_workspaces | lower }}, support: {{ include_support | lower }}, admin: {{ include_admin | lower }},
+    billing: {{ include_billing | lower }}, ai: {{ include_ai | lower }}, email: {{ include_email | lower }}, storage: {{ include_object_storage | lower }},
+  },
+};
+
+function body<T extends z.ZodType>(schema: T, value: unknown): z.infer<T> { return schema.parse(value); }
+async function audit(userId: string, workspaceId: string | null, action: string, targetType: string, targetId?: string) {
+  await db.insert(s.auditEvents).values({ actorUserId: userId, workspaceId, action, targetType, targetId });
+}
+
+export function createApp() {
+  const app = new Hono<{ Variables: Variables }>();
+  app.onError((error, c) => {
+    if (error instanceof HTTPException) return error.getResponse();
+    if (error instanceof z.ZodError) return c.json({ error: "Validation failed", fields: error.flatten().fieldErrors }, 400);
+    console.error(error);
+    return c.json({ error: "Something went wrong. Please try again." }, 500);
+  });
+
+  app.get("/health", (c) => c.json({ status: "ok" }));
+  app.get("/ready", async (c) => { try { await checkDatabase(); return c.json({ status: "ready" }); } catch { return c.json({ status: "not_ready" }, 503); } });
+  app.get("/api/config", (c) => c.json(appConfig));
+  app.use("/api/auth/*", async (c, next) => {
+    if (env.REGISTRATION_MODE === "invite_only" && c.req.path.endsWith("/sign-up/email") && c.req.method === "POST" && !c.req.header("x-invite-token")) {
+      return c.json({ error: "Registration is invite-only." }, 403);
+    }
+    await next();
+  });
+  app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+
+  app.use("/api/*", async (c, next) => {
+    if (c.req.path === "/api/billing/webhook") return next();
+    const current = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (!current) return c.json({ error: "Authentication required" }, 401);
+    c.set("session", current);
+    await next();
+  });
+
+  app.get("/api/me", async (c) => {
+    const { user } = c.get("session");
+    const [profile, preferences, onboarding, memberships] = await Promise.all([
+      db.query.userProfiles.findFirst({ where: eq(s.userProfiles.userId, user.id) }),
+      db.query.userPreferences.findFirst({ where: eq(s.userPreferences.userId, user.id) }),
+      db.query.onboardingProgress.findFirst({ where: eq(s.onboardingProgress.userId, user.id) }),
+      db.select({ id: s.workspaces.id, name: s.workspaces.name, slug: s.workspaces.slug, kind: s.workspaces.kind, role: s.workspaceMemberships.role })
+        .from(s.workspaceMemberships).innerJoin(s.workspaces, eq(s.workspaceMemberships.workspaceId, s.workspaces.id)).where(eq(s.workspaceMemberships.userId, user.id)),
+    ]);
+    return c.json({ user: { id: user.id, name: user.name, email: user.email, image: user.image }, profile, preferences, onboarding, workspaces: memberships, config: appConfig });
+  });
+
+  app.patch("/api/profile", async (c) => {
+    const { user } = c.get("session");
+    const data = body(z.object({ displayName: z.string().min(1).max(80), bio: z.string().max(500).default(""), jobTitle: z.string().max(100).default(""), timezone: z.string().min(1).max(80), persona: z.enum(s.personaEnum.enumValues).nullable() }), await c.req.json());
+    const [profile] = await db.update(s.userProfiles).set(data).where(eq(s.userProfiles.userId, user.id)).returning();
+    await db.update(s.user).set({ name: data.displayName }).where(eq(s.user.id, user.id));
+    await audit(user.id, null, "profile.updated", "user", user.id);
+    return c.json({ profile, message: "Profile saved" });
+  });
+
+  app.patch("/api/preferences", async (c) => {
+    const { user } = c.get("session");
+    const data = body(z.object({ theme: z.enum(["light", "dark", "system"]).optional(), emailNotifications: z.boolean().optional(), reducedMotion: z.boolean().optional(), activeWorkspaceId: z.string().uuid().optional() }), await c.req.json());
+    if (data.activeWorkspaceId) await requireWorkspaceRole(user.id, data.activeWorkspaceId);
+    const [preferences] = await db.update(s.userPreferences).set(data).where(eq(s.userPreferences.userId, user.id)).returning();
+    return c.json({ preferences, message: "Preferences saved" });
+  });
+
+  app.patch("/api/onboarding", async (c) => {
+    const { user } = c.get("session");
+    const data = body(z.object({ currentStep: z.enum(["profile", "persona", "workspace", "intended-use", "first-action", "complete"]), intendedUse: z.string().max(1000).optional(), firstActionCompleted: z.boolean().optional(), persona: z.enum(s.personaEnum.enumValues).optional() }), await c.req.json());
+    await db.transaction(async (tx) => {
+      if (data.persona) await tx.update(s.userProfiles).set({ persona: data.persona }).where(eq(s.userProfiles.userId, user.id));
+      await tx.update(s.onboardingProgress).set({ currentStep: data.currentStep, intendedUse: data.intendedUse, firstActionCompleted: data.firstActionCompleted, completedAt: data.currentStep === "complete" ? new Date() : undefined }).where(eq(s.onboardingProgress.userId, user.id));
+    });
+    return c.json({ message: data.currentStep === "complete" ? "Onboarding complete" : "Progress saved" });
+  });
+
+  app.post("/api/workspaces", async (c) => {
+    if (!appConfig.features.teams) return c.json({ error: "Team workspaces are hidden for this product." }, 404);
+    const { user } = c.get("session");
+    const data = body(z.object({ name: z.string().min(2).max(80) }), await c.req.json());
+    const workspaceId = crypto.randomUUID();
+    const slug = `${data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${workspaceId.slice(0, 8)}`;
+    await db.transaction(async (tx) => {
+      await tx.insert(s.workspaces).values({ id: workspaceId, name: data.name, slug, kind: "team", ownerUserId: user.id });
+      await tx.insert(s.workspaceMemberships).values({ workspaceId, userId: user.id, role: "owner" });
+      await tx.insert(s.workspaceSettings).values({ workspaceId });
+      await tx.insert(s.billingCustomers).values({ workspaceId });
+    });
+    await audit(user.id, workspaceId, "workspace.created", "workspace", workspaceId);
+    return c.json({ id: workspaceId, name: data.name, slug }, 201);
+  });
+
+  app.get("/api/workspaces/:workspaceId", async (c) => {
+    const { user } = c.get("session"); const workspaceId = c.req.param("workspaceId");
+    await requireWorkspaceRole(user.id, workspaceId);
+    const [workspace, settings, members] = await Promise.all([
+      db.query.workspaces.findFirst({ where: eq(s.workspaces.id, workspaceId) }),
+      db.query.workspaceSettings.findFirst({ where: eq(s.workspaceSettings.workspaceId, workspaceId) }),
+      db.select({ id: s.workspaceMemberships.id, userId: s.user.id, name: s.user.name, email: s.user.email, role: s.workspaceMemberships.role }).from(s.workspaceMemberships).innerJoin(s.user, eq(s.workspaceMemberships.userId, s.user.id)).where(eq(s.workspaceMemberships.workspaceId, workspaceId)),
+    ]);
+    return c.json({ workspace, settings, members });
+  });
+
+  app.patch("/api/workspaces/:workspaceId", async (c) => {
+    const { user } = c.get("session"); const workspaceId = c.req.param("workspaceId");
+    await requireWorkspaceRole(user.id, workspaceId, "admin");
+    const data = body(z.object({ name: z.string().min(2).max(80).optional(), teamFeaturesEnabled: z.boolean().optional(), inviteOnly: z.boolean().optional(), billingEmail: z.string().email().nullable().optional() }), await c.req.json());
+    await db.transaction(async (tx) => {
+      if (data.name) await tx.update(s.workspaces).set({ name: data.name }).where(eq(s.workspaces.id, workspaceId));
+      const { name: _, ...settings } = data;
+      if (Object.keys(settings).length) await tx.update(s.workspaceSettings).set(settings).where(eq(s.workspaceSettings.workspaceId, workspaceId));
+    });
+    await audit(user.id, workspaceId, "workspace.updated", "workspace", workspaceId);
+    return c.json({ message: "Workspace saved" });
+  });
+
+  app.post("/api/workspaces/:workspaceId/invitations", async (c) => {
+    const { user } = c.get("session"); const workspaceId = c.req.param("workspaceId");
+    await requireWorkspaceRole(user.id, workspaceId, "admin");
+    const data = body(z.object({ email: z.string().email(), role: z.enum(["admin", "member", "support"]).default("member") }), await c.req.json());
+    const token = crypto.randomUUID(); const tokenHash = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token))).toString("hex");
+    const [invitation] = await db.insert(s.workspaceInvitations).values({ workspaceId, email: data.email.toLowerCase(), role: data.role, tokenHash, invitedByUserId: user.id, expiresAt: new Date(Date.now() + 7 * 86400000) }).returning({ id: s.workspaceInvitations.id });
+    if (!invitation) throw new Error("Invitation could not be created.");
+    await getEmailProvider().send({ template: "workspace-invitation", to: data.email, subject: "You're invited", data: { url: `${env.APP_URL}/invite/${token}` } });
+    await audit(user.id, workspaceId, "invitation.created", "workspace_invitation", invitation.id);
+    return c.json({ id: invitation.id, message: "Invitation sent" }, 201);
+  });
+
+  app.post("/api/invitations/:token/accept", async (c) => {
+    const { user } = c.get("session");
+    const tokenHash = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(c.req.param("token")))).toString("hex");
+    const invitation = await db.query.workspaceInvitations.findFirst({ where: eq(s.workspaceInvitations.tokenHash, tokenHash) });
+    if (invitation?.status !== "pending") return c.json({ error: "Invitation is unavailable." }, 404);
+    if (invitation.expiresAt < new Date()) {
+      await db.update(s.workspaceInvitations).set({ status: "expired" }).where(eq(s.workspaceInvitations.id, invitation.id));
+      return c.json({ error: "Invitation has expired." }, 410);
+    }
+    if (invitation.email.toLowerCase() !== user.email.toLowerCase()) return c.json({ error: "This invitation belongs to another email address." }, 403);
+    await db.transaction(async (tx) => {
+      await tx.insert(s.workspaceMemberships).values({ workspaceId: invitation.workspaceId, userId: user.id, role: invitation.role }).onConflictDoNothing();
+      await tx.update(s.workspaceInvitations).set({ status: "accepted" }).where(eq(s.workspaceInvitations.id, invitation.id));
+      await tx.update(s.userPreferences).set({ activeWorkspaceId: invitation.workspaceId }).where(eq(s.userPreferences.userId, user.id));
+    });
+    await audit(user.id, invitation.workspaceId, "invitation.accepted", "workspace_invitation", invitation.id);
+    return c.json({ workspaceId: invitation.workspaceId, message: "Invitation accepted" });
+  });
+
+  app.patch("/api/workspaces/:workspaceId/members/:membershipId", async (c) => {
+    const { user } = c.get("session"); const workspaceId = c.req.param("workspaceId");
+    await requireWorkspaceRole(user.id, workspaceId, "admin");
+    const data = body(z.object({ role: z.enum(["admin", "member", "support"]) }), await c.req.json());
+    await db.update(s.workspaceMemberships).set({ role: data.role }).where(and(eq(s.workspaceMemberships.id, c.req.param("membershipId")), eq(s.workspaceMemberships.workspaceId, workspaceId)));
+    await audit(user.id, workspaceId, "membership.role_changed", "workspace_membership", c.req.param("membershipId"));
+    return c.json({ message: "Member role updated" });
+  });
+
+  app.delete("/api/workspaces/:workspaceId/members/:membershipId", async (c) => {
+    const { user } = c.get("session"); const workspaceId = c.req.param("workspaceId");
+    await requireWorkspaceRole(user.id, workspaceId, "admin");
+    const membership = await db.query.workspaceMemberships.findFirst({ where: and(eq(s.workspaceMemberships.id, c.req.param("membershipId")), eq(s.workspaceMemberships.workspaceId, workspaceId)) });
+    if (!membership || membership.role === "owner") return c.json({ error: "Owners cannot be removed." }, 400);
+    await db.delete(s.workspaceMemberships).where(eq(s.workspaceMemberships.id, membership.id));
+    await audit(user.id, workspaceId, "membership.removed", "workspace_membership", membership.id);
+    return c.json({ message: "Member removed" });
+  });
+
+  app.get("/api/support/tickets", async (c) => {
+    if (!appConfig.features.support) return c.json({ tickets: [] });
+    const { user } = c.get("session"); const workspaceId = c.req.query("workspaceId");
+    if (!workspaceId) return c.json({ error: "workspaceId is required" }, 400);
+    await requireWorkspaceRole(user.id, workspaceId);
+    const tickets = await db.select().from(s.supportTickets).where(eq(s.supportTickets.workspaceId, workspaceId)).orderBy(desc(s.supportTickets.updatedAt));
+    return c.json({ tickets });
+  });
+
+  app.post("/api/support/tickets", async (c) => {
+    const { user } = c.get("session");
+    const data = body(z.object({ workspaceId: z.string().uuid(), subject: z.string().min(4).max(160), category: z.string().min(2).max(80), priority: z.enum(s.ticketPriorityEnum.enumValues), message: z.string().min(10).max(10000) }), await c.req.json());
+    await requireWorkspaceRole(user.id, data.workspaceId);
+    const ticket = await db.transaction(async (tx) => {
+      const [created] = await tx.insert(s.supportTickets).values({ workspaceId: data.workspaceId, createdByUserId: user.id, subject: data.subject, category: data.category, priority: data.priority }).returning();
+      if (!created) throw new Error("Support ticket could not be created.");
+      await tx.insert(s.supportTicketMessages).values({ ticketId: created.id, authorUserId: user.id, body: data.message });
+      return created;
+    });
+    await audit(user.id, data.workspaceId, "support.ticket_created", "support_ticket", ticket.id);
+    await getEmailProvider().send({ template: "support-received", to: user.email, subject: `Ticket received: ${ticket.subject}`, data: { ticketId: ticket.id } });
+    return c.json({ ticket, message: "Support ticket created" }, 201);
+  });
+
+  app.get("/api/support/tickets/:ticketId", async (c) => {
+    const { user } = c.get("session");
+    const ticket = await db.query.supportTickets.findFirst({ where: eq(s.supportTickets.id, c.req.param("ticketId")) });
+    if (!ticket) return c.json({ error: "Ticket not found" }, 404);
+    await requireWorkspaceRole(user.id, ticket.workspaceId);
+    const messages = await db.select({ id: s.supportTicketMessages.id, body: s.supportTicketMessages.body, createdAt: s.supportTicketMessages.createdAt, authorName: s.user.name }).from(s.supportTicketMessages).innerJoin(s.user, eq(s.supportTicketMessages.authorUserId, s.user.id)).where(eq(s.supportTicketMessages.ticketId, ticket.id)).orderBy(s.supportTicketMessages.createdAt);
+    return c.json({ ticket, messages });
+  });
+
+  app.post("/api/support/tickets/:ticketId/messages", async (c) => {
+    const { user } = c.get("session"); const ticket = await db.query.supportTickets.findFirst({ where: eq(s.supportTickets.id, c.req.param("ticketId")) });
+    if (!ticket) return c.json({ error: "Ticket not found" }, 404); await requireWorkspaceRole(user.id, ticket.workspaceId);
+    const data = body(z.object({ message: z.string().min(2).max(10000) }), await c.req.json());
+    const [message] = await db.insert(s.supportTicketMessages).values({ ticketId: ticket.id, authorUserId: user.id, body: data.message }).returning();
+    await db.update(s.supportTickets).set({ status: "open" }).where(eq(s.supportTickets.id, ticket.id));
+    return c.json({ message, notice: "Reply added" }, 201);
+  });
+
+  app.patch("/api/support/tickets/:ticketId/status", async (c) => {
+    const { user } = c.get("session"); const ticket = await db.query.supportTickets.findFirst({ where: eq(s.supportTickets.id, c.req.param("ticketId")) });
+    if (!ticket) return c.json({ error: "Ticket not found" }, 404); await requireWorkspaceRole(user.id, ticket.workspaceId);
+    const data = body(z.object({ status: z.enum(["open", "closed"]) }), await c.req.json());
+    const [updated] = await db.update(s.supportTickets).set({ status: data.status }).where(eq(s.supportTickets.id, ticket.id)).returning();
+    return c.json({ ticket: updated, message: data.status === "closed" ? "Ticket closed" : "Ticket reopened" });
+  });
+
+  app.get("/api/admin/overview", async (c) => {
+    const { user } = c.get("session"); await requireSystemRole(user.id, ["admin", "support"]);
+    const [users, workspaces, tickets, audits] = await Promise.all([db.select().from(s.user), db.select().from(s.workspaces), db.select().from(s.supportTickets).orderBy(desc(s.supportTickets.updatedAt)), db.select().from(s.auditEvents).orderBy(desc(s.auditEvents.createdAt)).limit(100)]);
+    return c.json({ users: users.map(({ id, name, email, emailVerified, createdAt }) => ({ id, name, email, emailVerified, createdAt })), workspaces, tickets, audits });
+  });
+
+  app.get("/api/admin/users", async (c) => {
+    const { user } = c.get("session"); await requireSystemRole(user.id, ["admin", "support"]); const query = c.req.query("q") || "";
+    const users = await db.select({ id: s.user.id, name: s.user.name, email: s.user.email, emailVerified: s.user.emailVerified, createdAt: s.user.createdAt, systemRole: s.userProfiles.systemRole }).from(s.user).leftJoin(s.userProfiles, eq(s.user.id, s.userProfiles.userId)).where(query ? or(ilike(s.user.name, `%${query}%`), ilike(s.user.email, `%${query}%`)) : undefined).limit(100);
+    return c.json({ users });
+  });
+
+  app.get("/api/admin/support/:ticketId", async (c) => {
+    const { user } = c.get("session"); await requireSystemRole(user.id, ["admin", "support"]);
+    const ticket = await db.query.supportTickets.findFirst({ where: eq(s.supportTickets.id, c.req.param("ticketId")) });
+    if (!ticket) return c.json({ error: "Ticket not found" }, 404);
+    const [messages, notes] = await Promise.all([
+      db.select({ id: s.supportTicketMessages.id, body: s.supportTicketMessages.body, createdAt: s.supportTicketMessages.createdAt, authorName: s.user.name }).from(s.supportTicketMessages).innerJoin(s.user, eq(s.supportTicketMessages.authorUserId, s.user.id)).where(eq(s.supportTicketMessages.ticketId, ticket.id)).orderBy(s.supportTicketMessages.createdAt),
+      db.select({ id: s.internalSupportNotes.id, body: s.internalSupportNotes.body, createdAt: s.internalSupportNotes.createdAt, authorName: s.user.name }).from(s.internalSupportNotes).innerJoin(s.user, eq(s.internalSupportNotes.authorUserId, s.user.id)).where(eq(s.internalSupportNotes.ticketId, ticket.id)).orderBy(s.internalSupportNotes.createdAt),
+    ]);
+    return c.json({ ticket, messages, notes });
+  });
+
+  app.patch("/api/admin/support/:ticketId", async (c) => {
+    const { user } = c.get("session"); await requireSystemRole(user.id, ["admin", "support"]);
+    const data = body(z.object({ status: z.enum(s.ticketStatusEnum.enumValues).optional(), assignedToUserId: z.string().uuid().nullable().optional(), reply: z.string().min(2).max(10000).optional(), internalNote: z.string().min(2).max(10000).optional() }), await c.req.json());
+    const ticketId = c.req.param("ticketId"); const ticket = await db.query.supportTickets.findFirst({ where: eq(s.supportTickets.id, ticketId) });
+    if (!ticket) return c.json({ error: "Ticket not found" }, 404);
+    await db.transaction(async (tx) => {
+      if (data.status || data.assignedToUserId !== undefined) await tx.update(s.supportTickets).set({ status: data.status, assignedToUserId: data.assignedToUserId }).where(eq(s.supportTickets.id, ticketId));
+      if (data.reply) await tx.insert(s.supportTicketMessages).values({ ticketId, authorUserId: user.id, body: data.reply });
+      if (data.internalNote) await tx.insert(s.internalSupportNotes).values({ ticketId, authorUserId: user.id, body: data.internalNote });
+    });
+    await audit(user.id, ticket.workspaceId, "support.ticket_updated", "support_ticket", ticketId);
+    return c.json({ message: "Ticket updated" });
+  });
+
+  app.get("/api/system/services", async (c) => {
+    const { user } = c.get("session"); await requireSystemRole(user.id, ["admin", "support"]);
+    return c.json({ services: { ai: getAiProvider().status, email: getEmailProvider().status, storage: getObjectStorage().status, billing: billingStatus }, environment: env.NODE_ENV });
+  });
+
+  app.post("/api/billing/checkout", async (c) => {
+    const { user } = c.get("session"); const data = body(z.object({ workspaceId: z.string().uuid() }), await c.req.json()); await requireWorkspaceRole(user.id, data.workspaceId, "admin");
+    if (!appConfig.features.billing || billingStatus !== "connected") return c.json({ error: "Billing is not configured." }, 503);
+    const customer = await db.query.billingCustomers.findFirst({ where: eq(s.billingCustomers.workspaceId, data.workspaceId) });
+    const checkout = await stripeClient().checkout.sessions.create({ mode: "subscription", line_items: [{ price: requirePriceId(), quantity: 1 }], customer: customer?.providerCustomerId || undefined, customer_email: customer?.providerCustomerId ? undefined : user.email, success_url: `${env.APP_URL}/settings/billing?checkout=success`, cancel_url: `${env.APP_URL}/settings/billing?checkout=cancelled`, metadata: { workspaceId: data.workspaceId } });
+    return c.json({ url: checkout.url });
+  });
+
+  app.post("/api/billing/webhook", async (c) => {
+    if (!env.STRIPE_WEBHOOK_SECRET) return c.json({ error: "Billing webhook is not configured." }, 503);
+    const signature = c.req.header("stripe-signature"); if (!signature) return c.json({ error: "Missing Stripe signature" }, 400);
+    const event = stripeClient().webhooks.constructEvent(await c.req.text(), signature, env.STRIPE_WEBHOOK_SECRET);
+    return c.json({ received: true, type: event.type });
+  });
+
+  app.notFound((c) => c.req.path.startsWith("/api/") ? c.json({ error: "API route not found" }, 404) : c.json({ error: "Not found" }, 404));
+  app.use("*", serveStatic({ root: "./dist/public" }));
+  app.get("*", async (c) => {
+    try { return c.html(await readFile(path.resolve("dist/public/index.html"), "utf8")); }
+    catch { return c.html("<!doctype html><html><body><div id=\"root\"></div></body></html>"); }
+  });
+  return app;
+}

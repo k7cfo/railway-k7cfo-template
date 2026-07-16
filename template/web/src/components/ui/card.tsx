@@ -1,6 +1,6 @@
-import type * as React from "react"
+import type * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 function Card({
   className,
@@ -15,11 +15,11 @@ function Card({
         "group/card flex flex-col gap-4 rounded-none border-2 border-[var(--border-1)] bg-[var(--bg-1)] py-5 text-sm text-[var(--fg-1)]",
         "data-[size=sm]:gap-2 data-[size=sm]:py-4",
         "has-data-[slot=card-footer]:pb-0",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
@@ -30,11 +30,11 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
         "@container/card-header grid auto-rows-min items-start gap-1 px-5 group-data-[size=sm]/card:px-4",
         "has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto]",
         "[.border-b]:pb-4 group-data-[size=sm]/card:[.border-b]:pb-3",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
@@ -43,11 +43,11 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="card-title"
       className={cn(
         "font-sans text-base font-semibold tracking-tight text-[var(--fg-1)] group-data-[size=sm]/card:text-sm",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
@@ -57,20 +57,17 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("text-sm leading-relaxed text-[var(--fg-2)]", className)}
       {...props}
     />
-  )
+  );
 }
 
 function CardAction({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-action"
-      className={cn(
-        "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
-        className
-      )}
+      className={cn("col-start-2 row-span-2 row-start-1 self-start justify-self-end", className)}
       {...props}
     />
-  )
+  );
 }
 
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
@@ -80,7 +77,7 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("px-5 group-data-[size=sm]/card:px-4", className)}
       {...props}
     />
-  )
+  );
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
@@ -89,19 +86,11 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="card-footer"
       className={cn(
         "flex items-center border-t border-[var(--border-1)] px-5 py-4 group-data-[size=sm]/card:px-4 group-data-[size=sm]/card:py-3",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
-export {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardAction,
-  CardDescription,
-  CardContent,
-}
+export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent };

@@ -1,14 +1,14 @@
 // Social proof — text logos + testimonial cards. Renders NOTHING until the
 // content file has real logos or quotes: never ship fake proof.
 
-import { Reveal } from "@/components/motion/reveal"
-import { marketing } from "@/content/marketing"
+import { Reveal } from "@/components/motion/reveal";
+import { marketing } from "@/content/marketing";
 
 export function SocialProof() {
-  const proof = marketing.socialProof
-  const hasLogos = proof.logos.length > 0
-  const hasTestimonials = proof.testimonials.length > 0
-  if (!hasLogos && !hasTestimonials) return null
+  const proof = marketing.socialProof;
+  const hasLogos = proof.logos.length > 0;
+  const hasTestimonials = proof.testimonials.length > 0;
+  if (!hasLogos && !hasTestimonials) return null;
 
   return (
     <section className="border-t border-[var(--border-1)] py-16 lg:py-20">
@@ -41,7 +41,7 @@ export function SocialProof() {
                 >
                   {logo.name}
                 </span>
-              )
+              ),
             )}
           </div>
         </Reveal>
@@ -71,5 +71,5 @@ export function SocialProof() {
         </div>
       )}
     </section>
-  )
+  );
 }

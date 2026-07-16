@@ -1,0 +1,51 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.4/schema.json",
+  "files": {
+    "ignoreUnknown": true,
+    "includes": ["**", "!dist", "!node_modules", "!web/src/components/ui"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 110,
+    "includes": [
+      "**",
+      "!src/app.ts",
+      "!src/auth.ts",
+      "!src/env.ts",
+      "!scripts/seed.ts",
+      "!scripts/setup.mjs",
+      "!web/src/components/marketing/footer.tsx",
+      "!web/src/components/marketing/nav.tsx",
+      "!web/src/content/marketing.ts",
+      "!web/src/pages/forgot-password.tsx",
+      "!web/src/pages/login.tsx",
+      "!web/src/pages/reset-password.tsx",
+      "!web/src/pages/signup.tsx"
+    ]
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "a11y": {
+        "noAutofocus": "off",
+        "noLabelWithoutControl": "off",
+        "noStaticElementInteractions": "off",
+        "useAriaPropsSupportedByRole": "off",
+        "useButtonType": "off"
+      },
+      "style": { "noNonNullAssertion": "off", "useTemplate": "off" },
+      "suspicious": { "noArrayIndexKey": "off" }
+    }
+  },
+  "javascript": {
+    "formatter": { "quoteStyle": "double", "semicolons": "always", "trailingCommas": "all" }
+  },
+  "css": {
+    "parser": { "tailwindDirectives": true },
+    "formatter": { "enabled": true },
+    "linter": { "enabled": false }
+  }
+}

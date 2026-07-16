@@ -29,7 +29,7 @@ export function Signup() {
     onSuccess: (data) => {
       queryClient.setQueryData<AuthSession | null>(["session"], data)
       toast.success("Account created")
-      navigate("/app", { replace: true })
+      navigate("/onboarding", { replace: true })
     },
   })
 

@@ -3,23 +3,20 @@
 // on brand for the hard-edged systems). Colors resolve from tokens at runtime
 // so the band follows the design system and theme toggle.
 
-import { Link } from "react-router"
-import { GrainGradient } from "@paper-design/shaders-react"
+import { Link } from "react-router";
+import { GrainGradient } from "@paper-design/shaders-react";
 
-import { Button } from "@/components/ui/button"
-import { Reveal } from "@/components/motion/reveal"
-import {
-  usePrefersReducedMotion,
-  useTokenColors,
-} from "@/components/marketing/use-token-colors"
-import { marketing } from "@/content/marketing"
+import { Button } from "@/components/ui/button";
+import { Reveal } from "@/components/motion/reveal";
+import { usePrefersReducedMotion, useTokenColors } from "@/components/marketing/use-token-colors";
+import { marketing } from "@/content/marketing";
 
-const TOKENS = ["--bg-0", "--accent", "--orange-deep", "--fg-0"] as const
+const TOKENS = ["--bg-0", "--accent", "--orange-deep", "--fg-0"] as const;
 
 export function CtaBand() {
-  const colors = useTokenColors(TOKENS)
-  const reduced = usePrefersReducedMotion()
-  const final = marketing.finalCta
+  const colors = useTokenColors(TOKENS);
+  const reduced = usePrefersReducedMotion();
+  const final = marketing.finalCta;
 
   return (
     <section className="relative overflow-hidden border-t border-[var(--border-1)]">
@@ -61,5 +58,5 @@ export function CtaBand() {
         </Reveal>
       </div>
     </section>
-  )
+  );
 }

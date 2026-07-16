@@ -1,0 +1,54 @@
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { eq } from "drizzle-orm";
+import { db } from "./db/index.js";
+import * as schema from "./db/schema.js";
+import { env } from "./env.js";
+import { getEmailProvider } from "./services/email/index.js";
+
+function slugPart(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 36) || "workspace";
+}
+
+async function provisionUser(createdUser: { id: string; name: string; email: string }) {
+  const workspaceId = crypto.randomUUID();
+  const slug = `${slugPart(createdUser.name)}-${workspaceId.slice(0, 8)}`;
+  await db.transaction(async (tx) => {
+    const existing = await tx.query.userProfiles.findFirst({ where: eq(schema.userProfiles.userId, createdUser.id) });
+    if (existing) return;
+    await tx.insert(schema.userProfiles).values({ userId: createdUser.id, displayName: createdUser.name });
+    await tx.insert(schema.workspaces).values({ id: workspaceId, name: `${createdUser.name}'s workspace`, slug, kind: "personal", ownerUserId: createdUser.id });
+    await tx.insert(schema.workspaceMemberships).values({ workspaceId, userId: createdUser.id, role: "owner" });
+    await tx.insert(schema.workspaceSettings).values({ workspaceId, teamFeaturesEnabled: {{ include_team_workspaces | lower }} });
+    await tx.insert(schema.userPreferences).values({ userId: createdUser.id, activeWorkspaceId: workspaceId });
+    await tx.insert(schema.onboardingProgress).values({ userId: createdUser.id });
+    await tx.insert(schema.billingCustomers).values({ workspaceId });
+    await tx.insert(schema.auditEvents).values({ workspaceId, actorUserId: createdUser.id, action: "user.registered", targetType: "user", targetId: createdUser.id });
+  });
+  await getEmailProvider().send({ template: "welcome", to: createdUser.email, subject: "Welcome to {{ app_title }}", data: { name: createdUser.name } });
+}
+
+export const auth = betterAuth({
+  appName: "{{ app_title }}",
+  baseURL: env.BETTER_AUTH_URL,
+  secret: env.BETTER_AUTH_SECRET,
+  trustedOrigins: [env.APP_URL, env.BETTER_AUTH_URL],
+  database: drizzleAdapter(db, { provider: "pg", schema }),
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: env.EMAIL_PROVIDER === "resend",
+    sendResetPassword: async ({ user, url }) => {
+      await getEmailProvider().send({ template: "password-reset", to: user.email, subject: "Reset your password", data: { name: user.name, url } });
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: env.EMAIL_PROVIDER === "resend",
+    sendVerificationEmail: async ({ user, url }) => {
+      await getEmailProvider().send({ template: "verification", to: user.email, subject: "Verify your email", data: { name: user.name, url } });
+    },
+  },
+  user: { deleteUser: { enabled: true } },
+  databaseHooks: { user: { create: { after: provisionUser } } },
+});
+
+export type Session = typeof auth.$Infer.Session;

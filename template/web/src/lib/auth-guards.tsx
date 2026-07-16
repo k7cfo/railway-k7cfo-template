@@ -1,9 +1,9 @@
-import type { ReactNode } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { Loader } from "lucide-react"
-import { Navigate } from "react-router"
+import type { ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Loader } from "lucide-react";
+import { Navigate, useLocation } from "react-router";
 
-import { authClient, type AuthSession } from "@/lib/auth-client"
+import { authClient, type AuthSession } from "@/lib/auth-client";
 
 // useSession is a hook deliberately co-located with the route guards that consume it
 export function useSession() {
@@ -11,12 +11,12 @@ export function useSession() {
     queryKey: ["session"],
     queryFn: async () => {
       try {
-        return await authClient.getSession()
+        return await authClient.getSession();
       } catch {
-        return null
+        return null;
       }
     },
-  })
+  });
 }
 
 function SessionPending() {
@@ -24,19 +24,30 @@ function SessionPending() {
     <div className="flex min-h-svh items-center justify-center bg-[var(--bg-0)]">
       <Loader className="size-7 animate-spin text-[var(--bf-orange)]" />
     </div>
-  )
+  );
 }
 
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { data: session, isPending } = useSession()
-  if (isPending) return <SessionPending />
-  if (!session) return <Navigate to="/login" replace />
-  return <>{children}</>
+  const { data: session, isPending } = useSession();
+  if (isPending) return <SessionPending />;
+  if (!session) return <Navigate to="/sign-in" replace />;
+  return <>{children}</>;
 }
 
 export function RequireGuest({ children }: { children: ReactNode }) {
-  const { data: session, isPending } = useSession()
-  if (isPending) return <SessionPending />
-  if (session) return <Navigate to="/app" replace />
-  return <>{children}</>
+  const location = useLocation();
+  const { data: session, isPending } = useSession();
+  if (isPending) return <SessionPending />;
+  if (session)
+    return (
+      <Navigate
+        to={
+          location.pathname.includes("sign-up") || location.pathname.includes("signup")
+            ? "/onboarding"
+            : "/app"
+        }
+        replace
+      />
+    );
+  return <>{children}</>;
 }

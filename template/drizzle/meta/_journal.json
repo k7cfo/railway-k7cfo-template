@@ -1,20 +1,7 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
-    {
-      "idx": 0,
-      "version": "6",
-      "when": 1776576333018,
-      "tag": "0000_init",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1783038050050,
-      "tag": "0001_billing",
-      "breakpoints": true
-    }
+    { "idx": 0, "version": "7", "when": 1784235600000, "tag": "0000_portable_saas", "breakpoints": true }
   ]
 }

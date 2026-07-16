@@ -96,10 +96,8 @@
 
   /* TYPE STACKS — Geist UI + Fraunces high-contrast serif display */
   --font-sans: "Geist Variable", "Geist", system-ui, -apple-system, sans-serif;
-  --font-mono: "Geist Mono Variable", "Geist Mono", "SF Mono", "Menlo",
-    "Consolas", monospace;
-  --font-display: "Fraunces Variable", "Fraunces", "Times New Roman", Georgia,
-    serif;
+  --font-mono: "Geist Mono Variable", "Geist Mono", "SF Mono", "Menlo", "Consolas", monospace;
+  --font-display: "Fraunces Variable", "Fraunces", "Times New Roman", Georgia, serif;
   --font-condensed: var(--font-sans);
   --font-pixel: var(--font-display);
   --font-dot: var(--font-display);
@@ -310,29 +308,17 @@
 
 /* Decorative dot grid. */
 @utility dot-grid {
-  background-image: radial-gradient(
-    circle,
-    var(--border-visible) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(circle, var(--border-visible) 1px, transparent 1px);
   background-size: 16px 16px;
 }
 
 @utility dot-grid-subtle {
-  background-image: radial-gradient(
-    circle,
-    var(--border) 0.5px,
-    transparent 0.5px
-  );
+  background-image: radial-gradient(circle, var(--border) 0.5px, transparent 0.5px);
   background-size: 12px 12px;
 }
 
 @utility paper-grid {
-  background-image: radial-gradient(
-    circle,
-    var(--border-visible) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(circle, var(--border-visible) 1px, transparent 1px);
   background-size: 16px 16px;
 }
 

@@ -82,16 +82,12 @@
   --term-blue: var(--signal-blue);
 
   /* TYPE STACKS */
-  --font-sans: "Archivo Variable", "Archivo", "Helvetica Neue", Helvetica,
-    Arial, sans-serif;
-  --font-condensed: "Archivo Narrow", "Archivo", "Helvetica Neue Condensed",
-    sans-serif;
-  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", "SF Mono", "Menlo",
-    "Consolas", monospace;
+  --font-sans: "Archivo Variable", "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-condensed: "Archivo Narrow", "Archivo", "Helvetica Neue Condensed", sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", "SF Mono", "Menlo", "Consolas", monospace;
   /* Apex's hero moment is the heavy industrial wordmark — Archivo at display
      size (self-contained via fontsource, no external font CDN). */
-  --font-display: "Archivo Variable", "Archivo", "Helvetica Neue", Helvetica,
-    Arial, sans-serif;
+  --font-display: "Archivo Variable", "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-pixel: var(--font-mono);
   --font-dot: var(--font-mono);
 

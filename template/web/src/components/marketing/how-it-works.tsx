@@ -1,12 +1,12 @@
 // How it works — a numbered three-step band for skeptics who scroll.
 // Steps come from the content file; section hides when absent.
 
-import { Reveal } from "@/components/motion/reveal"
-import { marketing } from "@/content/marketing"
+import { Reveal } from "@/components/motion/reveal";
+import { marketing } from "@/content/marketing";
 
 export function HowItWorks() {
-  const how = marketing.howItWorks
-  if (!how || how.steps.length === 0) return null
+  const how = marketing.howItWorks;
+  if (!how || how.steps.length === 0) return null;
 
   return (
     <section className="border-t border-[var(--border-1)] py-16 lg:py-20">
@@ -32,12 +32,10 @@ export function HowItWorks() {
             <h3 className="m-0 font-sans text-[16px] font-medium tracking-[-0.01em] text-[var(--fg-0)] uppercase">
               {step.title}
             </h3>
-            <p className="m-0 font-sans text-[13px] leading-[1.6] text-[var(--fg-2)]">
-              {step.body}
-            </p>
+            <p className="m-0 font-sans text-[13px] leading-[1.6] text-[var(--fg-2)]">{step.body}</p>
           </Reveal>
         ))}
       </div>
     </section>
-  )
+  );
 }

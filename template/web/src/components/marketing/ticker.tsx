@@ -3,11 +3,11 @@
 // Inspired by react-bits LogoLoop; freezes under prefers-reduced-motion.
 // Items come from the content file; an empty list hides the tape.
 
-import { marketing } from "@/content/marketing"
+import { marketing } from "@/content/marketing";
 
 export function Ticker() {
-  const items = marketing.ticker
-  if (items.length === 0) return null
+  const items = marketing.ticker;
+  if (items.length === 0) return null;
 
   const row = items.map((item) => (
     <span key={item} className="flex items-center gap-8">
@@ -16,7 +16,7 @@ export function Ticker() {
         ▪
       </span>
     </span>
-  ))
+  ));
 
   return (
     <div
@@ -43,5 +43,5 @@ export function Ticker() {
         <div className="flex items-center gap-8">{row}</div>
       </div>
     </div>
-  )
+  );
 }

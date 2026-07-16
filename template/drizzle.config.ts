@@ -1,8 +1,15 @@
+import "dotenv/config";
 import { defineConfig } from "drizzle-kit";
 
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL is required. Copy .env.example to .env or run pnpm setup.");
+}
+
 export default defineConfig({
+  dialect: "postgresql",
+  schema: "./src/db/schema.ts",
   out: "./drizzle",
-  schema: ["./src/db/schema.ts", "./src/db/app-schema.ts"],
-  dialect: "sqlite",
-  driver: "d1-http",
+  dbCredentials: { url: process.env.DATABASE_URL },
+  strict: true,
+  verbose: true,
 });

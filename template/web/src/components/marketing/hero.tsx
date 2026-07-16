@@ -1,14 +1,14 @@
-import { Link } from "react-router"
+import { Link } from "react-router";
 
-import { Button } from "@/components/ui/button"
-import { HeroBackdrop } from "@/components/marketing/hero-backdrop"
-import { SplitText } from "@/components/motion/split-text"
-import { DecryptedText } from "@/components/motion/decrypted-text"
-import { Reveal } from "@/components/motion/reveal"
-import { marketing } from "@/content/marketing"
+import { Button } from "@/components/ui/button";
+import { HeroBackdrop } from "@/components/marketing/hero-backdrop";
+import { SplitText } from "@/components/motion/split-text";
+import { DecryptedText } from "@/components/motion/decrypted-text";
+import { Reveal } from "@/components/motion/reveal";
+import { marketing } from "@/content/marketing";
 
 export function Hero() {
-  const hero = marketing.hero
+  const hero = marketing.hero;
 
   return (
     <section className="relative py-16 lg:py-24">
@@ -99,15 +99,10 @@ export function Hero() {
                 FIG · 01
               </span>
             </div>
-            <img
-              src={hero.proof.src}
-              alt={hero.proof.alt}
-              loading="lazy"
-              className="block w-full"
-            />
+            <img src={hero.proof.src} alt={hero.proof.alt} loading="lazy" className="block w-full" />
           </figure>
         </Reveal>
       )}
     </section>
-  )
+  );
 }

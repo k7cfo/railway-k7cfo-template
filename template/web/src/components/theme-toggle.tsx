@@ -1,29 +1,29 @@
-import { useEffect, useState } from "react"
-import { Monitor, Moon, Sun } from "lucide-react"
+import { useEffect, useState } from "react";
+import { Monitor, Moon, Sun } from "lucide-react";
 
-import { applyTheme, getTheme, type Theme } from "@/lib/theme"
+import { applyTheme, getTheme, type Theme } from "@/lib/theme";
 
-const ORDER: Theme[] = ["system", "light", "dark"]
-const ICON = { system: Monitor, light: Sun, dark: Moon } as const
-const LABEL = { system: "SYS", light: "LGT", dark: "DRK" } as const
+const ORDER: Theme[] = ["system", "light", "dark"];
+const ICON = { system: Monitor, light: Sun, dark: Moon } as const;
+const LABEL = { system: "SYS", light: "LGT", dark: "DRK" } as const;
 
 // Cycles System → Light → Dark. A mono label keeps it instrument-panel honest;
 // the icon is the one-glance state.
 export function ThemeToggle({ className }: { className?: string }) {
-  const [theme, setTheme] = useState<Theme>("system")
+  const [theme, setTheme] = useState<Theme>("system");
 
   // Sync from storage on mount (the pre-paint script already applied it).
   useEffect(() => {
-    setTheme(getTheme())
-  }, [])
+    setTheme(getTheme());
+  }, []);
 
   function cycle() {
-    const next = ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length]
-    setTheme(next)
-    applyTheme(next)
+    const next = ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length];
+    setTheme(next);
+    applyTheme(next);
   }
 
-  const Icon = ICON[theme]
+  const Icon = ICON[theme];
 
   return (
     <button
@@ -39,5 +39,5 @@ export function ThemeToggle({ className }: { className?: string }) {
       <Icon className="size-3.5" />
       {LABEL[theme]}
     </button>
-  )
+  );
 }

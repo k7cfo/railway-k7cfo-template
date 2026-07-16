@@ -1,27 +1,20 @@
-import path from "node:path"
-import tailwindcss from "@tailwindcss/vite"
-import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import path from "node:path";
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 
-// https://vite.dev/config/
 export default defineConfig({
+  root: path.resolve(import.meta.dirname),
   plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  // `mise run dev` runs Vite's dev server (this) alongside `wrangler dev`.
-  // Vite serves the SPA on :5173 with HMR; whatever paths the Worker is
-  // mounted on (per wrangler.jsonc `run_worker_first`) get proxied to :8787
-  // so the React app sees a single-origin world. `changeOrigin` stays false
-  // so the Origin header better-auth's CSRF check inspects matches what the
-  // browser actually sent (http://localhost:5173, covered by BETTER_AUTH_URL
-  // in dev). Add more entries here as the worker grows new top-level routes.
+  resolve: { alias: { "@": path.resolve(import.meta.dirname, "src") } },
+  build: { outDir: path.resolve(import.meta.dirname, "../dist/public"), emptyOutDir: true },
   server: {
-    host: true,
+    host: "0.0.0.0",
+    port: 5173,
     proxy: {
-      "/api": "http://localhost:8787",
+      "/api": "http://127.0.0.1:3000",
+      "/health": "http://127.0.0.1:3000",
+      "/ready": "http://127.0.0.1:3000",
     },
   },
-})
+});

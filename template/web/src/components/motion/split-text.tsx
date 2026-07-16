@@ -2,40 +2,33 @@
 // motion and the design-system motion tokens: clipped word masks, words rise
 // from below the baseline with a snappy industrial ease. No bounces.
 
-import { motion, useReducedMotion } from "motion/react"
+import { motion, useReducedMotion } from "motion/react";
 
 type SplitTextProps = {
-  text: string
-  className?: string
+  text: string;
+  className?: string;
   /** Seconds before the first word starts. */
-  delay?: number
+  delay?: number;
   /** Seconds between each word. */
-  stagger?: number
+  stagger?: number;
   /** Seconds each word takes to land. */
-  duration?: number
-}
+  duration?: number;
+};
 
-const EASE = [0.2, 0.7, 0.1, 1] as const
+const EASE = [0.2, 0.7, 0.1, 1] as const;
 
-export function SplitText({
-  text,
-  className,
-  delay = 0,
-  stagger = 0.07,
-  duration = 0.7,
-}: SplitTextProps) {
-  const reduced = useReducedMotion()
-  const words = text.split(/\s+/).filter(Boolean)
+export function SplitText({ text, className, delay = 0, stagger = 0.07, duration = 0.7 }: SplitTextProps) {
+  const reduced = useReducedMotion();
+  const words = text.split(/\s+/).filter(Boolean);
 
   if (reduced) {
-    return <span className={className}>{text}</span>
+    return <span className={className}>{text}</span>;
   }
 
   return (
     <span className={className}>
       <span className="sr-only">{text}</span>
       {words.map((word, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: words are static and can repeat
         <span key={i} aria-hidden="true">
           <span className="-mb-[0.08em] inline-block overflow-hidden pb-[0.08em] align-bottom">
             <motion.span
@@ -55,5 +48,5 @@ export function SplitText({
         </span>
       ))}
     </span>
-  )
+  );
 }
