@@ -1,13 +1,13 @@
-# Portable SaaS Template
+# railway-k7cfo-template
 
-A Railway-first, cloud-portable Copier template for generating a polished modular-monolith SaaS application. Each generated app runs a Hono API and React SPA together in one Node.js container, backed by PostgreSQL.
+A Railway-first, cloud-portable Copier template for shipping polished SaaS applications. Each generated app runs a Hono API and React SPA together in one Node.js container, backed by PostgreSQL and ready for Docker deployment.
 
 This project was derived from [knowsuchagency/cloudflare-template](https://github.com/knowsuchagency/cloudflare-template). Its Nothing, Apex, and Onyx design systems, shadcn/Radix components, typography, and visual character are retained. The upstream repository did not include a standalone license file at import time; see `docs/UPSTREAM.md` for provenance. Existing upstream notices remain intact.
 
 ## Generate an application
 
 ```bash
-uvx copier copy --trust /absolute/path/to/portable-saas-template /absolute/path/to/new-app
+uvx copier copy --trust /absolute/path/to/railway-k7cfo-template /absolute/path/to/new-app
 ```
 
 Or:

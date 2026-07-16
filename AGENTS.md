@@ -1,4 +1,4 @@
-# Portable SaaS Template Maintainer Instructions
+# railway-k7cfo-template Maintainer Instructions
 
 This repository is a Copier template, not the generated application. `AGENTS.md` is canonical and `CLAUDE.md` must remain a relative symlink to it.
 

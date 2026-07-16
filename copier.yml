@@ -51,7 +51,7 @@ app_tagline:
 app_description:
   type: str
   help: Short product description used in metadata and documentation.
-  default: A focused SaaS product built from the Portable SaaS Template.
+  default: A focused SaaS product built from railway-k7cfo-template.
 design_system:
   type: str
   help: Visual design system. All three remain available after generation.
