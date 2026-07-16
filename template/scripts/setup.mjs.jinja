@@ -9,7 +9,8 @@ function run(command, args, optional = false) {
 }
 console.log("Setting up {{ app_title }}…");
 run("pnpm", ["install"]);
-for (const [command, fix] of [["node", "Install Node.js 22 LTS."], ["pnpm", "Run: corepack enable"], ["docker", "Install and start Docker Desktop or Docker Engine."]]) {
+if (Number(process.versions.node.split(".")[0]) < 24) { console.error(`Node.js ${process.versions.node} is too old. Install Node.js 24 LTS.`); process.exit(1); }
+for (const [command, fix] of [["pnpm", "Run: corepack enable"], ["docker", "Install and start Docker Desktop or Docker Engine."]]) {
   if (!run(command, ["--version"], true)) { console.error(`${command} is missing. ${fix}`); process.exit(1); }
 }
 if (!existsSync(".env")) {

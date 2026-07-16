@@ -12,7 +12,13 @@ function command(name, args, fix, optional = false) {
     optional,
   });
 }
-command("node", ["--version"], "Install Node.js 22 LTS.");
+const nodeIsCurrentLts = Number(process.versions.node.split(".")[0]) >= 24;
+checks.push({
+  name: "node",
+  ok: nodeIsCurrentLts,
+  detail: nodeIsCurrentLts ? process.version : `${process.version} is too old; install Node.js 24 LTS`,
+  optional: false,
+});
 command("pnpm", ["--version"], "Run: corepack enable");
 command("docker", ["--version"], "Install and start Docker.");
 command("op", ["--version"], "Optional: install 1Password CLI.", true);
