@@ -1,4 +1,4 @@
-# {{ app_title }} — Coding Agent Instructions
+# Generated SaaS Application — Coding Agent Instructions
 
 `AGENTS.md` is canonical. `CLAUDE.md` must remain a relative symlink to this file. These instructions apply to Codex and Claude Code.
 
