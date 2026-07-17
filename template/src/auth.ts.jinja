@@ -32,7 +32,8 @@ export const auth = betterAuth({
   appName: "{{ app_title }}",
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
-  trustedOrigins: [env.APP_URL, env.BETTER_AUTH_URL],
+  trustedOrigins: [...new Set([env.APP_URL, env.BETTER_AUTH_URL, ...env.TRUSTED_ORIGINS])],
+  advanced: { ipAddress: { ipAddressHeaders: [env.AUTH_IP_HEADER] } },
   database: drizzleAdapter(db, { provider: "pg", schema }),
   emailAndPassword: {
     enabled: true,

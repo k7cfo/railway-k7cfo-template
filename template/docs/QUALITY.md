@@ -15,7 +15,17 @@ The smoke test starts the compiled Hono/React application on a temporary local p
 - a protected API rejects an anonymous request;
 - a nested client-side route returns the compiled SPA.
 
+When a deployment uses Tailscale, run `pnpm tailscale:check` after starting the app through Tailscale. It repeats the health, readiness, anonymous-authentication, and SPA checks through the private HTTPS URL. This live check is intentionally separate from `pnpm verify` because CI must not require membership in the owner's tailnet.
+
 Run `pnpm setup` once before the first verification so PostgreSQL and local configuration are available. Run `pnpm verify` after meaningful changes and immediately before a manual deployment. It does not deploy or change remote infrastructure.
+
+After a test deployment, run the same complete browser flow against its public URL before promoting it:
+
+```bash
+E2E_BASE_URL=https://your-test-domain.example pnpm test:e2e
+```
+
+Setting `E2E_BASE_URL` prevents Playwright from starting a local server. The flow creates disposable application records in the target database, so use a test deployment rather than production. Check `/health` and `/ready` separately, inspect deployment logs, and fix every failure before promotion.
 
 ## Keeping AI-generated code small
 

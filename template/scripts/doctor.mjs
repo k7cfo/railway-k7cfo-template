@@ -23,6 +23,7 @@ command("pnpm", ["--version"], "Run: corepack enable");
 command("docker", ["--version"], "Install and start Docker.");
 command("op", ["--version"], "Optional: install 1Password CLI.", true);
 command("railway", ["--version"], "Optional: install Railway CLI.", true);
+command("tailscale", ["version"], "Optional: install Tailscale to use private tailnet access.", true);
 checks.push({
   name: ".env",
   ok: existsSync(".env"),
