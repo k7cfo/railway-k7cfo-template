@@ -38,9 +38,21 @@ Tailscale access-control grants still decide which tailnet users and devices can
 
 For Docker-only appliances, Tailscale also publishes an official container image and Docker Desktop integration. Those approaches require node state and an auth method, so they are not added to the default Compose file or application image. Prefer the host daemon unless the deployment genuinely cannot provide it.
 
-## Railway and public exposure
+## Private Railway access
 
-Railway remains the default public deployment and needs no Tailscale variables. Use its HTTPS domain for `APP_URL` and `BETTER_AUTH_URL`. These scripts do not silently join a Railway container to a tailnet and do not make a Railway service private.
+Railway does not require a public domain. Keep the web service on Railway's private network and add the optional proxy in `ops/tailscale-proxy` only when the product should be tailnet-only. The proxy is a separate, narrowly scoped service based on Tailscale's official container; it forwards Tailscale Serve to the web service's private Railway hostname. The application container remains provider-neutral and does not receive the Tailscale auth key.
+
+1. Create a Railway service named `tailscale`, then deploy the proxy directory with `railway up ops/tailscale-proxy --service tailscale`.
+2. Set `TS_AUTHKEY` on that service to a pre-authorized, tagged auth key or an OAuth-generated ephemeral credential. Set `TS_HOSTNAME` to a unique DNS label and `TAILSCALE_UPSTREAM` to `web.railway.internal:3000` (adjust `web` if the private service name differs).
+3. Leave the proxy without a Railway domain. Its logs print the exact private `https://…ts.net` URL after Tailscale Serve is ready.
+4. Set the web service's `APP_URL` and `BETTER_AUTH_URL` to that exact URL, add it to `TRUSTED_ORIGINS`, redeploy the web service, and run `pnpm tailscale:check` from an authorized tailnet device.
+5. Delete any temporary Railway public domain only after the private login and smoke flow pass.
+
+No Tailscale service, variable, key, or public Railway domain is created automatically. This keeps both Tailscale and public exposure off by default. The optional proxy is the one deliberate exception to the normal one-app-service layout; PostgreSQL and all application code remain unchanged.
+
+## Public exposure
+
+For a public SaaS deployment, use Railway's HTTPS domain for `APP_URL` and `BETTER_AUTH_URL` and do not deploy the optional proxy. The application scripts do not silently join a Railway container to a tailnet.
 
 Tailscale Funnel is intentionally not automated because it exposes the service to the public internet. Use the normal Railway/custom-domain path for a public SaaS application. If you explicitly choose Funnel later, review authentication, rate limiting, and the tailnet's Funnel policy first.
 

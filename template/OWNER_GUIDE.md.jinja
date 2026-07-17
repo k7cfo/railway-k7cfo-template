@@ -2,7 +2,7 @@
 
 Run `pnpm setup` once, then `pnpm dev`; open `http://localhost:5173`. Stop with Ctrl-C and restart with `pnpm dev`. View PostgreSQL logs with `docker compose logs -f postgres`; view application logs in the terminal running `pnpm dev`.
 
-To open development privately from another device in your Tailscale network, install and connect Tailscale on the development machine, then run `pnpm dev:tailscale`. Open the private HTTPS URL it prints. Check the live route with `pnpm tailscale:check`, inspect it with `pnpm tailscale:status`, and disable this machine's app endpoint with `pnpm tailscale:off`. This does not make the app public; access remains subject to your tailnet policy. See `docs/TAILSCALE.md` before using Tailscale on a production host.
+To open development privately from another device in your Tailscale network, install and connect Tailscale on the development machine, then run `pnpm dev:tailscale`. Open the private HTTPS URL it prints. Check the live route with `pnpm tailscale:check`, inspect it with `pnpm tailscale:status`, and disable this machine's app endpoint with `pnpm tailscale:off`. This does not make the app public; access remains subject to your tailnet policy. Railway can use the optional `ops/tailscale-proxy` service without giving the app container a Tailscale key. See `docs/TAILSCALE.md` before using either production pattern.
 
 Add a local variable to ignored `.env`, then restart. For 1Password, copy `.env.op.example` to `.env.op`, point entries at your vault items, and run `op run --env-file=.env.op -- pnpm dev`.
 
