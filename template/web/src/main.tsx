@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { StrictMode } from "react";
+import { StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import App from "./App";
+import { LoadingState } from "./components/saas-shell";
 import "./index.css";
 
 export const queryClient = new QueryClient({
@@ -14,7 +15,9 @@ createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <Suspense fallback={<LoadingState label="Loading page" />}>
+          <App />
+        </Suspense>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,
