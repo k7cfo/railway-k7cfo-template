@@ -29,7 +29,7 @@ Setting `E2E_BASE_URL` prevents Playwright from starting a local server. The flo
 
 ## Keeping AI-generated code small
 
-Biome catches unsafe and inconsistent code, TypeScript catches invalid assumptions, Vitest and Playwright catch behavior regressions, Knip catches unused files, dependencies, and duplicate exports, and the bundle budget catches accidental client-side bloat. Do not silence a finding simply to make the command green. Remove unnecessary code, fix the behavior, or document a narrowly scoped exception in `docs/DECISIONS.md`.
+Biome catches unsafe and inconsistent code, TypeScript catches invalid assumptions, Vitest and Playwright catch behavior regressions, Knip catches unused files, dependencies, and duplicate exports, and the bundle budget catches accidental client-side bloat. The default budgets are 950 KB across all client JavaScript and 500 KB for any one chunk, so large page groups must remain lazy-loaded. Do not silence a finding simply to make the command green. Remove unnecessary code, fix the behavior, or document a narrowly scoped exception in `docs/DECISIONS.md`.
 
 Prefer extending an existing module over adding a parallel helper. Add a dependency only when the platform and current packages cannot solve the problem clearly. Create shared abstractions after a second concrete use, not in anticipation of one.
 

@@ -1,27 +1,36 @@
+import { lazy, type ReactNode } from "react";
 import { Route, Routes } from "react-router";
 import { Toaster } from "./components/ui/sonner";
 import { AppShell } from "./components/saas-shell";
 import { RequireAuth, RequireGuest } from "./lib/auth-guards";
-import { ForgotPassword } from "./pages/forgot-password";
-import { Landing } from "./pages/landing";
-import { Login } from "./pages/login";
-import { ResetPassword } from "./pages/reset-password";
-import {
-  AdminPage,
-  AdminTicketPage,
-  DashboardPage,
-  FaqPage,
-  InvitePage,
-  NewTicketPage,
-  OnboardingPage,
-  PublicPage,
-  SettingsPage,
-  SupportPage,
-  TicketPage,
-} from "./pages/saas";
-import { Signup } from "./pages/signup";
 
-const Protected = ({ children }: { children: React.ReactNode }) => (
+const ForgotPassword = lazy(() =>
+  import("./pages/forgot-password").then(({ ForgotPassword }) => ({ default: ForgotPassword })),
+);
+const Landing = lazy(() => import("./pages/landing").then(({ Landing }) => ({ default: Landing })));
+const Login = lazy(() => import("./pages/login").then(({ Login }) => ({ default: Login })));
+const ResetPassword = lazy(() =>
+  import("./pages/reset-password").then(({ ResetPassword }) => ({ default: ResetPassword })),
+);
+const Signup = lazy(() => import("./pages/signup").then(({ Signup }) => ({ default: Signup })));
+const loadSaasPages = () => import("./pages/saas");
+const AdminPage = lazy(() => loadSaasPages().then(({ AdminPage }) => ({ default: AdminPage })));
+const AdminTicketPage = lazy(() =>
+  loadSaasPages().then(({ AdminTicketPage }) => ({ default: AdminTicketPage })),
+);
+const DashboardPage = lazy(() => loadSaasPages().then(({ DashboardPage }) => ({ default: DashboardPage })));
+const FaqPage = lazy(() => loadSaasPages().then(({ FaqPage }) => ({ default: FaqPage })));
+const InvitePage = lazy(() => loadSaasPages().then(({ InvitePage }) => ({ default: InvitePage })));
+const NewTicketPage = lazy(() => loadSaasPages().then(({ NewTicketPage }) => ({ default: NewTicketPage })));
+const OnboardingPage = lazy(() =>
+  loadSaasPages().then(({ OnboardingPage }) => ({ default: OnboardingPage })),
+);
+const PublicPage = lazy(() => loadSaasPages().then(({ PublicPage }) => ({ default: PublicPage })));
+const SettingsPage = lazy(() => loadSaasPages().then(({ SettingsPage }) => ({ default: SettingsPage })));
+const SupportPage = lazy(() => loadSaasPages().then(({ SupportPage }) => ({ default: SupportPage })));
+const TicketPage = lazy(() => loadSaasPages().then(({ TicketPage }) => ({ default: TicketPage })));
+
+const Protected = ({ children }: { children: ReactNode }) => (
   <RequireAuth>
     <AppShell>{children}</AppShell>
   </RequireAuth>
